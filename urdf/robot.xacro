@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="robot2_laser_xacro">
-<xacro:include filename="$(find planning)/urdf/robot2_laser.gazebo"/>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="robot_xacro">
+<xacro:include filename="$(find exp_assignment3)/urdf/robot.gazebo"/>
 					
 	<xacro:property name="length_wheel" value="0.02" />
 	<xacro:property name="radius_wheel" value="0.05" />
@@ -56,13 +56,13 @@
     <!-- body -->
     <collision name="collision_chassis">
       <geometry>
-        <box size="0.25 0.15 0.035"/>
+        <box size="0.25 0.15 0.05"/>
       </geometry>
     </collision>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.25 0.15 0.035"/>
+        <box size="0.25 0.15 0.05"/>
       </geometry>
       <material name="blue"/>
     </visual>
@@ -157,6 +157,34 @@
 	    <child link="hokuyo_link"/> 
 	 </joint>
 
+  <!-- camera -->
+  <link name="camera_link">
+	    <collision>
+	      <origin xyz="-0.025 0 0.05" rpy="0 0 0"/>
+	      <geometry>
+		      <box size="0.05 0.05 0.05"/>
+	      </geometry>
+	    </collision>
+	    <visual>
+	      <origin xyz="-0.025 0 0.05" rpy="0 0 0"/>
+	      <geometry>
+		      <box size="0.05 0.05 0.05"/>
+	      </geometry>
+	      <material name="grey"/>
+	    </visual>
+	    <inertial>
+	      <mass value="1e-5" />
+	      <origin xyz="0 0 0" rpy="0 0 0"/>
+	      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
+	    </inertial> 
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+	    <axis xyz="0 1 0" />
+	    <origin xyz="0.15 0 0.0" rpy="0 0 0"/>
+      <child link="camera_link"/>
+	    <parent link="link_chassis"/>
+	</joint>
 
 
 </robot>
