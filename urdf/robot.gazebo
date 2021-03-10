@@ -1,16 +1,20 @@
 <?xml version="1.0"?>
 <robot>
-  <!-- materials -->
- 
-  
+  <!-- materials -->  
   <gazebo reference="link_chassis">
-    <material>Gazebo/Orange</material>
+    <material>Gazebo/Blue</material>
   </gazebo>
   <gazebo reference="link_left_wheel">
-    <material>Gazebo/Blue</material>
+    <material>Gazebo/White</material>
   </gazebo>
   <gazebo reference="link_right_wheel">
-    <material>Gazebo/Blue</material>
+    <material>Gazebo/White</material>
+  </gazebo>
+  <gazebo reference="link_right_wheel_2">
+    <material>Gazebo/White</material>
+  </gazebo>
+  <gazebo reference="link_left_wheel_2">
+    <material>Gazebo/White</material>
   </gazebo>
 
   <gazebo>

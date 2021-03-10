@@ -106,7 +106,7 @@
       <material name="red"/>
     </visual>
   </link>
-
+<!--
   <link name="link_right_wheel_2">
     <xacro:default_inertial mass="0.2"/>
     <collision name="link_right_wheel_collision_2">
@@ -132,9 +132,9 @@
       <material name="red"/>
     </visual>
   </link>
-
+-->
   <joint name="joint_right_wheel" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.025 0.075 0"/>
+    <origin rpy="0 0 0" xyz="-0.075 0.075 0"/>
     <child link="link_right_wheel"/>
     <parent link="link_chassis"/>
     <axis rpy="0 0 0" xyz="0 1 0"/>
@@ -144,7 +144,7 @@
   
   
   <joint name="joint_left_wheel" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.025 -0.075 0"/>
+    <origin rpy="0 0 0" xyz="-0.075 -0.075 0"/>
     <child link="link_left_wheel"/>
     <parent link="link_chassis"/>
     <axis rpy="0 0 0" xyz="0 1 0"/>
@@ -152,7 +152,7 @@
     <joint_properties damping="1.0" friction="1.0"/>
   </joint>
   
-  <joint name="joint_right_wheel_2" type="continuous">
+  <!--<joint name="joint_right_wheel_2" type="continuous">
     <origin rpy="0 0 0" xyz="-0.075 0.075 0"/>
     <child link="link_right_wheel_2"/>
     <parent link="link_chassis"/>
@@ -170,7 +170,7 @@
     <limit effort="10000" velocity="1000"/>
     <joint_properties damping="1.0" friction="1.0"/>
   </joint>
-
+-->
   <!-- laser -->
   <link name="hokuyo_link">
 	    <collision>
@@ -215,7 +215,7 @@
 	      <geometry>
 		      <box size="0.05 0.05 0.05"/>
 	      </geometry>
-	      <material name="grey"/>
+	      <material name="red"/>
 	    </visual>
 	    <inertial>
 	      <mass value="1e-5" />

@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /RobotModel1
         - /RobotModel1/Links1
         - /Path1
       Splitter Ratio: 0.5
@@ -174,7 +173,7 @@ Visualization Manager:
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
-      Topic: /move_base/TrajectoryPlannerROS/global_plan
+      Topic: /move_base/NavfnROS/plan
       Unreliable: false
       Value: true
   Enabled: true
@@ -205,25 +204,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 10.765398979187012
+      Distance: 22.619232177734375
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -4.466825485229492
-        Y: 5.294800281524658
-        Z: -0.7354092597961426
+        X: -6.081455230712891
+        Y: -0.8536040186882019
+        Z: -2.960200548171997
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.24039825797080994
+      Pitch: 0.5153981447219849
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.4135823249816895
+      Yaw: 5.983587265014648
     Saved:
       - Class: rviz/Orbit
         Distance: 12.50146198272705
@@ -263,5 +262,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1200
-  X: 205
-  Y: 27
+  X: 730
+  Y: 74

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+<!-- scripts -->
+  <param name="home_x" value="-5" />
+  <param name="home_y" value="7" />
+
+  
+
+  <!--<include file="$(find exp_assignment3)/launch/explore.launch"></include>-->
+  <node name="behaviour_controller" pkg="exp_assignment3" type="behaviour_controller.py" output="screen" />
+  <node name="motion_controller" pkg="exp_assignment3" type="motion_controller.py" output="screen" />
+</launch>

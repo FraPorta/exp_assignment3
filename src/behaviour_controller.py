@@ -58,7 +58,7 @@ class Normal(smach.State):
                 ## If the robot sees the ball goes to the play behaviour
                 return 'go_play' 
                     
-            elif (random.randint(1,1000) == 1 and time_passed > 30):
+            elif (random.randint(1,10000) == 1 and time_passed > 30):
                 ## go to sleep at random 
                 #  (1/10000 chances per iteration -> 100 iterations per second -> 1/100 chance per second passed in Normal state)
                 return 'go_to_sleep'

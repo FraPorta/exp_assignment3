@@ -12,7 +12,8 @@ from sensor_msgs.msg import CompressedImage
 import math
 import actionlib
 import actionlib.msg
-from exp_assignment3.msg import PlanningAction, PlanningActionGoal
+# Brings in the .action file and messages used by the move base action
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 
 VERBOSE = False
@@ -22,10 +23,11 @@ behaviour = None
 # home position
 home = [rospy.get_param('home_x'), rospy.get_param('home_y')]
 # Action client goal init
-goal_pos = PlanningActionGoal()
+goal_pos = MoveBaseGoal()
+
 # action client init
 act_c = None
-# publishers for home poisition reaching and ball detection
+# publishers for home poisition reaching
 pubHome = rospy.Publisher("/home_reached", Bool, queue_size=1)
 
 # home_reached publisher init
@@ -35,8 +37,8 @@ home_reached = False
 #
 # get a random position on the map
 def get_random_position():
-    randX = random.randint(-8, 8)
-    randY = random.randint(-8, 8)
+    randX = random.randint(-10, 10)
+    randY = random.randint(-10, 10)
     randPos = [randX, randY]
     return randPos
 
@@ -51,16 +53,10 @@ def get_behaviour(state):
 #
 # callback to send_goal function
 def feedback_cb(feedback):
-    target_reached = False
-    if feedback.stat == "Target reached!":
-        target_reached = True
     # while the goal is being reached, check if the behaviour changes
     if behaviour == 'play' or behaviour == 'sleep':
         rospy.loginfo("The behaviour has changed! Canceling goal...")
         act_c.cancel_all_goals()
-    elif target_reached:
-        # if the goal has been reached
-        rospy.loginfo("Robot has reached the goal")
 
 ## function move_normal
 #
@@ -70,17 +66,21 @@ def move_normal():
     # get a random position
     pos = get_random_position()
 
+    goal_pos.target_pose.header.frame_id = "map"
+    goal_pos.target_pose.header.stamp = rospy.Time.now()
     # set robot goal position
-    goal_pos.goal.target_pose.pose.position.x = pos[0]
-    goal_pos.goal.target_pose.pose.position.y = pos[1]
-    goal_pos.goal.target_pose.pose.position.z = 0
-
+    goal_pos.target_pose.pose.position.x = pos[0]
+    goal_pos.target_pose.pose.position.y = pos[1]
+    goal_pos.target_pose.pose.position.z = 0
+    goal_pos.target_pose.pose.orientation.w = 2
     # send robot position and wait that the goal is reached within 60 seconds
-    act_c.send_goal(goal_pos.goal, feedback_cb=feedback_cb)
+    act_c.send_goal(goal_pos, feedback_cb=feedback_cb)
     rospy.loginfo("Robot goal position sent:")
-    rospy.loginfo(goal_pos.goal.target_pose.pose.position)
-    act_c.wait_for_result(rospy.Duration.from_sec(60.0))
-    
+    rospy.loginfo(goal_pos.target_pose.pose.position)
+    act_c.wait_for_result(rospy.Duration.from_sec(240.0))
+    result = act_c.get_result()
+    if result:
+        rospy.loginfo("Robot has reached the goal!")
 
 
 ## function move_sleep
@@ -89,18 +89,22 @@ def move_normal():
 def move_sleep():
     global home_reached
 
+    goal_pos.target_pose.header.frame_id = "map"
+    goal_pos.target_pose.header.stamp = rospy.Time.now()
     # set robot goal position
-    goal_pos.goal.target_pose.pose.position.x = home[0]
-    goal_pos.goal.target_pose.pose.position.y = home[1]
-    goal_pos.goal.target_pose.pose.position.z = 0
-
+    goal_pos.target_pose.pose.position.x = home[0]
+    goal_pos.target_pose.pose.position.y = home[1]
+    goal_pos.target_pose.pose.position.z = 0
+    goal_pos.target_pose.pose.orientation.w = 2
     # send robot position and wait that the goal is reached within 60 seconds
-    act_c.send_goal(goal_pos.goal)
+    act_c.send_goal(goal_pos)
     rospy.loginfo("Robot goal position sent!")
-    rospy.loginfo(goal_pos.goal.target_pose.pose.position)
-    act_c.wait_for_result(rospy.Duration.from_sec(60.0))
-    rospy.loginfo("Robot has reached the home position in time, now sleeps")
-    home_reached = True
+    rospy.loginfo(goal_pos.target_pose.pose.position)
+    act_c.wait_for_result(rospy.Duration.from_sec(240.0))
+    result = act_c.get_result()
+    if result:
+        rospy.loginfo("Robot has reached the home position in time, now sleeps")
+        home_reached = True
 
 ## function main
 #
@@ -116,7 +120,7 @@ def main():
     rospy.loginfo("Subscribed to the behaviour")
 
     # initialize action client
-    act_c = actionlib.SimpleActionClient('/robot/reaching_goal', PlanningAction)
+    act_c = actionlib.SimpleActionClient('move_base',MoveBaseAction)
 
     # wait for the initialization of the server for 10 seconds
     act_c.wait_for_server(rospy.Duration(10))

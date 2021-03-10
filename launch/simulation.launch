@@ -57,26 +57,10 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
 
-
-  
   <!-- Start RViz -->
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find exp_assignment3)/config/sim.rviz" />
-
-  <!-- scripts -->
-  
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find exp_assignment3)/config/sim.rviz" />  
 
   <include file="$(find exp_assignment3)/launch/gmapping.launch"></include>
-	
-  <!--<arg name="des_x" default= "3"/>
-  <arg name="des_y" default= "2"/>
-  <param name="des_pos_x" value="$(arg des_x)" />
-  <param name="des_pos_y" value="$(arg des_y)" />-->
-    
   <include file="$(find exp_assignment3)/launch/move_base.launch"></include>
   
-  <!--<node name="move_base_client" pkg="exp_assignment3" type="move_base_client.py" output="screen" />-->
-  
-  <!--<node pkg="exp_assignment3" type="wall_follow_service_m.py" name="wall_follower"/>
-  <node pkg="exp_assignment3" type="go_to_point_service_m.py" name="go_to_point" />
-  <node pkg="exp_assignment3" type="bug_m.py" name="bug" output="screen"/>-->
 </launch>
