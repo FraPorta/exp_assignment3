@@ -80,7 +80,7 @@
       </geometry>
     </visual>
   </link>
-  <!-- Wheels -->
+
    <link name="link_right_wheel">
     <xacro:default_inertial mass="0.2"/>
     <collision name="link_right_wheel_collision">
@@ -107,31 +107,6 @@
     </visual>
   </link>
 
-  <link name="link_right_wheel_2">
-    <xacro:default_inertial mass="0.2"/>
-    <collision name="link_right_wheel_collision_2">
-      <origin rpy="0 1.5707 1.5707" xyz="0 0 0"/>
-      <xacro:wheel_geometry />
-    </collision>
-    <visual name="link_right_wheel_visual_2">
-      <origin rpy="0 1.5707 1.5707" xyz="0 0 0"/>
-      <xacro:wheel_geometry />
-      <material name="red"/>
-    </visual>
-  </link>
-
-   <link name="link_left_wheel_2">
-    <xacro:default_inertial mass="0.2"/>
-    <collision name="link_left_wheel_collision_2">
-      <origin rpy="0 1.5707 1.5707" xyz="0 0 0"/>
-      <xacro:wheel_geometry />
-    </collision>
-    <visual name="link_left_wheel_visual_2">
-      <origin rpy="0 1.5707 1.5707" xyz="0 0 0"/>
-      <xacro:wheel_geometry />
-      <material name="red"/>
-    </visual>
-  </link>
 
   <joint name="joint_right_wheel" type="continuous">
     <origin rpy="0 0 0" xyz="-0.025 0.075 0"/>
@@ -152,26 +127,6 @@
     <joint_properties damping="1.0" friction="1.0"/>
   </joint>
   
-  <joint name="joint_right_wheel_2" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 0.075 0"/>
-    <child link="link_right_wheel_2"/>
-    <parent link="link_chassis"/>
-    <axis rpy="0 0 0" xyz="0 1 0"/>
-    <limit effort="10000" velocity="1000"/>
-    <joint_properties damping="1.0" friction="1.0"/>
-  </joint>
-  
-  
-  <joint name="joint_left_wheel_2" type="continuous">
-    <origin rpy="0 0 0" xyz="-0.075 -0.075 0"/>
-    <child link="link_left_wheel_2"/>
-    <parent link="link_chassis"/>
-    <axis rpy="0 0 0" xyz="0 1 0"/>
-    <limit effort="10000" velocity="1000"/>
-    <joint_properties damping="1.0" friction="1.0"/>
-  </joint>
-
-  <!-- laser -->
   <link name="hokuyo_link">
 	    <collision>
 	      <origin xyz="-0.02 0 -0.00125" rpy="0 0 0"/>

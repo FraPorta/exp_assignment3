@@ -12,7 +12,7 @@ from sensor_msgs.msg import CompressedImage
 import math
 import actionlib
 import actionlib.msg
-from exp_assignment2.msg import PlanningAction, PlanningActionGoal
+from exp_assignment3.msg import PlanningAction, PlanningActionGoal
 
 
 VERBOSE = False

@@ -31,7 +31,7 @@ class Normal(smach.State):
                             )
         
         self.ball_detected = False
-        self.rate = rospy.Rate(20)  # Loop at 100Hz
+        self.rate = rospy.Rate(20)  # Loop at 20Hz
 
     ## method execute
     #

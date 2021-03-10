@@ -17,6 +17,7 @@
   <arg name="use_clock_frequency" default="false"/>
   <arg name="pub_clock_frequency" default="100"/>
 
+  
   <!-- set use_sim_time flag -->
   <param name="/use_sim_time" value="$(arg use_sim_time)"/>
 
@@ -45,17 +46,37 @@
   <param name="robot_description" 
 	 command="$(find xacro)/xacro --inorder $(find exp_assignment3)/urdf/robot.xacro" />
   
-   <param name="human_description1" textfile="$(find exp_assignment3)/urdf/human.urdf" />
+  <param name="human_description1" textfile="$(find exp_assignment3)/urdf/human.urdf" />
       
   <node name="urdf_spawner_human1" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
         args="-urdf -model human1 -param human_description1 -x -6 -y 8.5 -z 0.34 -R 0 -P 0 -Y -0.75"/>
 
-  
   <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
           args="-urdf -model robot -param robot_description -x -5 -y 8 -Y -1.57 -z 0.05"/>
 
-  <node name="position_server" pkg="exp_assignment3" type="go_to_point_robot.py" output="screen" />
-
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+
+
   
+  <!-- Start RViz -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find exp_assignment3)/config/sim.rviz" />
+
+  <!-- scripts -->
+  
+
+  <include file="$(find exp_assignment3)/launch/gmapping.launch"></include>
+	
+  <!--<arg name="des_x" default= "3"/>
+  <arg name="des_y" default= "2"/>
+  <param name="des_pos_x" value="$(arg des_x)" />
+  <param name="des_pos_y" value="$(arg des_y)" />-->
+    
+  <include file="$(find exp_assignment3)/launch/move_base.launch"></include>
+  
+  <!--<node name="move_base_client" pkg="exp_assignment3" type="move_base_client.py" output="screen" />-->
+  
+  <!--<node pkg="exp_assignment3" type="wall_follow_service_m.py" name="wall_follower"/>
+  <node pkg="exp_assignment3" type="go_to_point_service_m.py" name="go_to_point" />
+  <node pkg="exp_assignment3" type="bug_m.py" name="bug" output="screen"/>-->
 </launch>
