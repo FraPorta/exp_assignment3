@@ -1,12 +1,20 @@
 <?xml version="1.0"?>
 <launch>
-<!-- scripts -->
   <param name="home_x" value="-5" />
-  <param name="home_y" value="7" />
+  <param name="home_y" value="8" />
 
-  
+  <rosparam>
+   Entrance : Blue
+   Closet : Red
+   Livingroom : Green
+   Kitchen : Yellow
+   Bathroom : Magenta
+   Bedroom : Black
+  </rosparam>
 
   <!--<include file="$(find exp_assignment3)/launch/explore.launch"></include>-->
   <node name="behaviour_controller" pkg="exp_assignment3" type="behaviour_controller.py" output="screen" />
   <node name="motion_controller" pkg="exp_assignment3" type="motion_controller.py" output="screen" />
+  <node name="ball_tracking" pkg="exp_assignment3" type="ball_tracking.py" output="screen" />
+
 </launch>

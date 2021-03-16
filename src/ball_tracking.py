@@ -2,7 +2,7 @@
 
 ## @package ball_tracking
 #
-# uses cv2 libraries to track the ball in the map and follow it (when in the play behaviour) 
+# uses cv2 libraries to track the balls in the map follow them and save the positions of the rooms 
 
 # Python libs
 import sys
@@ -25,11 +25,30 @@ import rospy
 from sensor_msgs.msg import CompressedImage, JointState 
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool, String, Float64
+from nav_msgs.msg import Odometry
 from random import randint
 import math 
 
 VERBOSE = False
-pubHeadPos = None
+
+# define colours limits
+greenLower = (50, 50, 20)
+greenUpper = (70, 255, 255)
+
+blackLower = (0, 0, 0)
+blackUpper = (5,50,50)
+ 
+redLower = (0, 50, 50)
+redUpper = (5, 255, 255)
+
+yellowLower = (25, 50, 50)
+yellowUpper = (35, 255, 255)
+
+blueLower = (100, 50, 50)
+blueUpper = (130, 255, 255)
+
+magentaLower = (125, 50, 50)
+magentaUpper = (150, 255, 255)
 
 
 ## class ball_tracking
@@ -46,14 +65,18 @@ class ball_tracking:
         self.center = None
         self.radius = None
         self.behaviour = None
-        self.ball_stopped = False
+        self.ball_reached = False
+        self.colour = None
+        self.current_pos = None
 
         # publishers
-        self.vel_pub = rospy.Publisher("/robot/cmd_vel", Twist, queue_size=1)
+        self.vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
         self.pubBall = rospy.Publisher("/ball_detected", Bool, queue_size=1)
+        self.pub_reach = rospy.Publisher("/ball_reached", Bool, queue_size=1)
 
         # subscriber to camera 
-        self.cam_sub = rospy.Subscriber("/robot/camera1/image_raw/compressed", CompressedImage, self.callback,  queue_size=1)
+        self.cam_sub = rospy.Subscriber("/camera1/image_raw/compressed", CompressedImage, self.callback,  queue_size=1)
+        self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
 
         # subscriber to current behaviour
         rospy.Subscriber("/behaviour", String, self.get_behaviour)
@@ -65,12 +88,48 @@ class ball_tracking:
     # subscriber callback to the behaviour topic
     def get_behaviour(self, state):
         self.behaviour = state.data
+    
+    ## method get_behaviour
+    #
+    # subscriber callback to the behaviour topic
+    def odom_callback(self, msg):
+        self.current_pos = msg.pose.pose.position
+
+    ## method get_mask_colour
+    #
+    # method to decide which colour mask will be applied
+    def get_mask_colour(self, maskGreen, maskBlack, maskRed, maskYellow, maskBlue, maskMagenta):
+        sumGreen = np.sum(maskGreen)
+        sumBlack = np.sum(maskBlack)
+        sumRed = np.sum(maskRed)
+        sumYellow = np.sum(maskYellow)
+        sumBlue = np.sum(maskBlue)
+        sumMagenta = np.sum(maskMagenta)
+        
+        # rospy.loginfo([sumGreen, sumBlack, sumRed, sumYellow, sumBlue, sumMagenta])
+        thresh = 1000
+
+        if sumGreen > thresh:
+            return [maskGreen, 'Green']
+        elif sumBlack > thresh:
+            return [maskBlack, 'Black']
+        elif sumRed > thresh:
+            return [maskRed, 'Red']
+        elif sumYellow > thresh:
+            return [maskYellow, 'Yellow']
+        elif sumBlue > thresh:
+            return [maskBlue, 'Blue']
+        elif sumMagenta > thresh:
+            return [maskMagenta, 'Magenta']
+        else:
+            return [maskGreen, 'None']    # default (the masks are all zeroes)
+
 
     ## method follow_ball
     #
     # publish velocities to follow the ball
     def follow_ball(self):
-        if self.ball_stopped:
+        if self.ball_reached:
             # if the ball stops, stop completely the robot
             twist_msg = Twist()
             twist_msg.angular.z = 0.0
@@ -82,27 +141,29 @@ class ball_tracking:
                 if self.near_ball: 
                     # if near enough to the ball start following it
                     twist_msg = Twist()
-                    twist_msg.angular.z = 0.003*(self.center[0] - 400)
+                    twist_msg.angular.z = -0.003*(self.center[0] - 400)
                     twist_msg.linear.x = -0.01*(self.radius - 100)
                     self.vel_pub.publish(twist_msg) 
                 else:
                     # if not near enough go towards the ball
                     twist_msg = Twist()
-                    twist_msg.linear.x = 0.8
+                    twist_msg.linear.x = 0.4
                     self.vel_pub.publish(twist_msg)
             # if the ball is not detected search it
-            elif not self.ball_detected:
-                twist_msg = Twist()
-                twist_msg.angular.z = 0.9
-                #if self.behaviour == "play":
-                self.vel_pub.publish(twist_msg)
+            #elif not self.ball_detected:
+            #  twist_msg = Twist()
+            #  twist_msg.angular.z = 0.9
+                
+            #  self.vel_pub.publish(twist_msg)
+
+    
 
     ## method callback
     #
     # Callback function of subscribed topic. 
     # Here images get converted and features detected
     def callback(self, ros_data):
-        if not self.ball_stopped:
+        if not self.ball_reached:
             if VERBOSE:
                 print ('received image of type: "%s"' % ros_data.format)
 
@@ -112,13 +173,20 @@ class ball_tracking:
             np_arr = np.fromstring(ros_data.data, np.uint8)
             image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)  # OpenCV >= 3.0:
 
-            greenLower = (50, 50, 20)
-            greenUpper = (70, 255, 255)
-
             blurred = cv2.GaussianBlur(image_np, (11, 11), 0)
             hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv, greenLower, greenUpper)
-            mask = cv2.erode(mask, None, iterations=2)
+
+            # create masks for all colours 
+            maskGreen = cv2.inRange(hsv, greenLower, greenUpper)
+            maskBlack = cv2.inRange(hsv, blackLower, blackUpper)
+            maskRed = cv2.inRange(hsv, redLower, redUpper)
+            maskYellow = cv2.inRange(hsv, yellowLower, yellowUpper)
+            maskBlue = cv2.inRange(hsv, blueLower, blueUpper)
+            maskMagenta = cv2.inRange(hsv, magentaLower, magentaUpper)
+            
+            mask_colour = self.get_mask_colour(maskGreen, maskBlack, maskRed, maskYellow, maskBlue, maskMagenta)
+
+            mask = cv2.erode(mask_colour[0], None, iterations=2)
             mask = cv2.dilate(mask, None, iterations=2)
             #cv2.imshow('mask', mask)
             cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
@@ -162,42 +230,29 @@ class ball_tracking:
             cv2.imshow('window', image_np)
             cv2.waitKey(2)
 
-            # if behaviour is play, follow the ball
-            if self.behaviour == "play":
+            # if behaviour is track, go near the ball
+            if self.behaviour == "track":
                 if self.ball_detected and self.near_ball:
-                    angular_z = 0.003*(self.center[0] - 400)
+                    angular_z = -0.003*(self.center[0] - 400)
                     linear_x = -0.01*(self.radius - 100)
-                    # if the ball is still, move the head
-                    if abs(angular_z) < 0.04 and abs(linear_x) < 0.04 :
-                        # signal that the ball has stopped
-                        self.ball_stopped = True
-                # follow the ball
-                self.follow_ball()
+                    if abs(angular_z) < 0.02 and abs(linear_x) < 0.02 :
+                        # signal that the ball has been reached
+                        self.ball_reached = True
+                        self.colour = mask_colour[1]
+                        self.save_info()
+                        self.pub_reach.publish(self.ball_reached)
+                        self.ball_reached = False
+                # track the ball if it is different from the last tracked ball
+                if mask_colour[1] != self.colour:
+                    self.follow_ball()
+    
+    def save_info(self):
+        pos_name = self.colour
+        if(rospy.search_param(pos_name) != None):
+            rospy.loginfo("Saving position of %s ball", pos_name)
+            rospy.set_param(pos_name, self.current_pos)
 
-## function move_head
-#
-# move the head of the robot when the ball stops
-def move_head():
-        rospy.loginfo("The ball has stopped!")
 
-        angle = math.pi/4
-
-        # move the head in one direction 45 degrees
-        head_angle = Float64()
-        head_angle.data = angle
-        pubHeadPos.publish(head_angle)
-        rospy.sleep(randint(3,6))
-
-        # move the head in the other direction 45 degrees
-        head_angle = Float64()
-        head_angle.data = -angle
-        pubHeadPos.publish(head_angle)
-        rospy.sleep(randint(3,6))
-
-        # move the head in the the default direction
-        head_angle = Float64()
-        head_angle.data = 0
-        pubHeadPos.publish(head_angle)
 
 ## function main
 #
@@ -206,23 +261,17 @@ def main(args):
     ## initialize ball tracking node
     rospy.init_node('ball_tracking', anonymous=True)
 
-    global pubHeadPos
+    #global pubHeadPos
 
     rate = rospy.Rate(100)
 
-    pubHeadPos = rospy.Publisher("/robot/joint_position_controller/command", Float64, queue_size=1)
+    #pubHeadPos = rospy.Publisher("/robot/joint_position_controller/command", Float64, queue_size=1)
 
     # Initializes class 
     bt = ball_tracking()
 
     while not rospy.is_shutdown():
-        # if the ball stops, move the head of the robot
-        if bt.ball_stopped:
-            move_head()
-            rospy.sleep(2)
-            bt.ball_stopped = False
-            rospy.loginfo("Return to ball tracking...")
-
+        
         rate.sleep()
     
     try:

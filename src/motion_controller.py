@@ -37,8 +37,8 @@ home_reached = False
 #
 # get a random position on the map
 def get_random_position():
-    randX = random.randint(-10, 10)
-    randY = random.randint(-10, 10)
+    randX = random.randint(-6, 6)
+    randY = random.randint(-8, 9)
     randPos = [randX, randY]
     return randPos
 
@@ -54,7 +54,7 @@ def get_behaviour(state):
 # callback to send_goal function
 def feedback_cb(feedback):
     # while the goal is being reached, check if the behaviour changes
-    if behaviour == 'play' or behaviour == 'sleep':
+    if behaviour == 'play' or behaviour == 'sleep' or behaviour == 'track':
         rospy.loginfo("The behaviour has changed! Canceling goal...")
         act_c.cancel_all_goals()
 
@@ -77,7 +77,7 @@ def move_normal():
     act_c.send_goal(goal_pos, feedback_cb=feedback_cb)
     rospy.loginfo("Robot goal position sent:")
     rospy.loginfo(goal_pos.target_pose.pose.position)
-    act_c.wait_for_result(rospy.Duration.from_sec(240.0))
+    act_c.wait_for_result(rospy.Duration.from_sec(180.0))
     result = act_c.get_result()
     if result:
         rospy.loginfo("Robot has reached the goal!")
@@ -120,7 +120,7 @@ def main():
     rospy.loginfo("Subscribed to the behaviour")
 
     # initialize action client
-    act_c = actionlib.SimpleActionClient('move_base',MoveBaseAction)
+    act_c = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
     # wait for the initialization of the server for 10 seconds
     act_c.wait_for_server(rospy.Duration(10))

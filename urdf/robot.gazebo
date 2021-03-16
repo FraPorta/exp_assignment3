@@ -10,12 +10,6 @@
   <gazebo reference="link_right_wheel">
     <material>Gazebo/White</material>
   </gazebo>
-  <gazebo reference="link_right_wheel_2">
-    <material>Gazebo/White</material>
-  </gazebo>
-  <gazebo reference="link_left_wheel_2">
-    <material>Gazebo/White</material>
-  </gazebo>
 
   <gazebo>
     <plugin filename="libgazebo_ros_diff_drive.so" name="differential_drive_controller">

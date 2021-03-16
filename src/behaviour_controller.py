@@ -27,7 +27,7 @@ class Normal(smach.State):
     # state initialization
     def __init__(self):
         smach.State.__init__(self, 
-                             outcomes=['go_to_sleep','go_play']
+                             outcomes=['go_to_sleep','go_play','go_track']
                             )
         
         self.ball_detected = False
@@ -55,8 +55,9 @@ class Normal(smach.State):
             time_passed = current_time.secs - init_time.secs
 
             if (self.ball_detected):
-                ## If the robot sees the ball goes to the play behaviour
-                return 'go_play' 
+                ## If the robot sees the ball goes to the Track substate
+                self.ball_detected = False
+                return 'go_track'
                     
             elif (random.randint(1,10000) == 1 and time_passed > 30):
                 ## go to sleep at random 
@@ -70,6 +71,47 @@ class Normal(smach.State):
     # subscriber callback for ball detection
     def get_ball_detection(self, ball):
         self.ball_detected = ball.data
+            
+
+## class state Track
+#
+# track behaviour of the pet
+class Track(smach.State):
+    ## method init
+    #
+    # state initialization
+    def __init__(self):
+        smach.State.__init__(self, 
+                             outcomes=['return_normal']
+                            )
+        
+        self.ball_reached = False
+        self.rate = rospy.Rate(20)  # Loop at 20Hz
+
+    ## method execute
+    #
+    # state execution
+    def execute(self, userdata):
+        rospy.loginfo('Executing state TRACK')
+        pub_state.publish("track")
+
+        ## check if the ball is detected
+        rospy.Subscriber("/ball_reached", Bool, self.get_ball_reached)
+
+        while not rospy.is_shutdown():  
+
+            if (self.ball_reached):
+                self.ball_reached = False
+                ## If the robot does not detect the ball anymore return to the Normal state
+                return 'return_normal'
+
+            self.rate.sleep()
+    
+    ## method get_ball_detection
+    #
+    # subscriber callback for ball detection
+    def get_ball_reached(self, ball):
+        self.ball_reached = ball.data
             
 
 
@@ -104,7 +146,7 @@ class Sleep(smach.State):
                 rospy.sleep(random.randint(20,40))
                 self.home_reached = False
                 return 'wake_up'
-            self.rate.sleep
+            self.rate.sleep()
         
     ## method get_home_reached
     #
@@ -176,7 +218,11 @@ def main():
         ## Add states to the container
         smach.StateMachine.add('NORMAL', Normal(), 
                                transitions={'go_to_sleep':'SLEEP', 
-                                            'go_play':'PLAY'})
+                                            'go_play':'PLAY',
+                                            'go_track':'TRACK'})
+
+        smach.StateMachine.add('TRACK', Track(), 
+                               transitions={'return_normal':'NORMAL'})
 
         smach.StateMachine.add('SLEEP', Sleep(), 
                                transitions={'wake_up':'NORMAL'})
