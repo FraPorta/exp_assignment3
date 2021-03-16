@@ -61,6 +61,6 @@
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find exp_assignment3)/config/sim.rviz" />  
 
   <include file="$(find exp_assignment3)/launch/gmapping.launch"></include>
-  <include file="$(find exp_assignment3)/launch/move_base.launch"></include>
+  
   
 </launch>

@@ -38,7 +38,9 @@ home_reached = False
 # get a random position on the map
 def get_random_position():
     randX = random.randint(-6, 6)
-    randY = random.randint(-8, 9)
+    randY = random.randint(-8, 8)
+    #randX = -1
+    #randY = 8
     randPos = [randX, randY]
     return randPos
 
@@ -80,7 +82,7 @@ def move_normal():
     act_c.wait_for_result(rospy.Duration.from_sec(180.0))
     result = act_c.get_result()
     if result:
-        rospy.loginfo("Robot has reached the goal!")
+        rospy.loginfo("Robot has reached the goal or the behaviour has changed")
 
 
 ## function move_sleep

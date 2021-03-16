@@ -54,12 +54,11 @@ class Normal(smach.State):
             current_time = rospy.Time.now()
             time_passed = current_time.secs - init_time.secs
 
-            if (self.ball_detected):
-                ## If the robot sees the ball goes to the Track substate
-                self.ball_detected = False
+            if (self.ball_detected and time_passed > 5):
+                ## If the robot sees the ball goes to the Track substate (until it just returned from the track state)
                 return 'go_track'
                     
-            elif (random.randint(1,10000) == 1 and time_passed > 30):
+            elif (random.randint(1,1000000) == 1 and time_passed > 30): # RICORDATI DI CAMBIARE RATE
                 ## go to sleep at random 
                 #  (1/10000 chances per iteration -> 100 iterations per second -> 1/100 chance per second passed in Normal state)
                 return 'go_to_sleep'
@@ -101,7 +100,6 @@ class Track(smach.State):
         while not rospy.is_shutdown():  
 
             if (self.ball_reached):
-                self.ball_reached = False
                 ## If the robot does not detect the ball anymore return to the Normal state
                 return 'return_normal'
 
