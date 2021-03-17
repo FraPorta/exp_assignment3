@@ -16,8 +16,6 @@ from std_msgs.msg import Bool
 ## current behaviour publisher
 pub_state = rospy.Publisher("/behaviour",String,queue_size=1)
 
-sub_home = None
-
 ## class state Normal
 #
 # normal behaviour of the pet
@@ -39,11 +37,12 @@ class Normal(smach.State):
         rospy.loginfo('Executing state NORMAL')
         pub_state.publish("normal")
 
-        
+        self.play_command = False
         self.ball_detected = False
 
         ## check if a voice command is received
         rospy.Subscriber("/ball_detected", Bool, self.get_ball_detection)
+        rospy.Subscriber("/play_command", Bool, self.get_play_command)
         count = 0
 
         init_time = rospy.Time.now()
@@ -60,10 +59,16 @@ class Normal(smach.State):
             if (self.ball_detected):
                 ## If the robot sees the ball goes to the Track substate
                 return 'go_track'
-                    
+            
+            elif (self.play_command):
+                ## If a play command is received, go to the Play state
+                return 'go_play'    
+
             elif (random.randint(1,1000000) == 1 and time_passed > 30): # RICORDATI DI CAMBIARE RATE
                 ## go to sleep at random 
                 return 'go_to_sleep'
+            
+        
                     
             self.rate.sleep()
     
@@ -72,6 +77,13 @@ class Normal(smach.State):
     # subscriber callback for ball detection
     def get_ball_detection(self, ball):
         self.ball_detected = ball.data
+
+    ## method get_play_command
+    #
+    # get command from human interaction generator
+    def get_play_command(self, command):
+        self.play_command = command.data
+
             
 
 ## class state Track
@@ -127,7 +139,7 @@ class Sleep(smach.State):
         smach.State.__init__(self, 
                              outcomes=['wake_up']
                             )
-        self.home_reached = False
+        
         self.rate = rospy.Rate(20)
         
     ## method execute
@@ -137,6 +149,7 @@ class Sleep(smach.State):
         rospy.loginfo('Executing state SLEEP')
         pub_state.publish("sleep")
 
+        self.home_reached = False
         # home position reached subscriber
         sub_home = rospy.Subscriber("/home_reached", Bool, self.get_home_reached)
         
@@ -167,9 +180,7 @@ class Play(smach.State):
         smach.State.__init__(self, 
                              outcomes=['stop_play'],
                             )
-        self.ball_detected = False
-        self.rate = rospy.Rate(1)
-        self.counter = 0
+        self.rate = rospy.Rate(20)
 
     ## method execute
     #
@@ -178,28 +189,34 @@ class Play(smach.State):
         rospy.loginfo('Executing state PLAY')
         pub_state.publish("play")
         
-        ## subscriber to ball detection
-        rospy.Subscriber("/ball_detected", Bool, self.get_ball_detection)
+        self.location_unknown = False
+        #sub_home = rospy.Subscriber("/home_reached", Bool, self.get_home_reached)
+        count = None
 
         while not rospy.is_shutdown():  
-            # check if the ball is not detected
-            if(not self.ball_detected):
-                self.counter = self.counter + 1
-                rospy.loginfo("Searching for the ball... "+str(self.counter)+" seconds")
-                # if the ball is not detected for 10 seconds straight
-                if self.counter > 15:
-                    return 'stop_play'
-            elif(self.ball_detected):
-                self.counter = 0
+            # count time passed from the start of Normal state
+            if count == 1:
+                init_time = rospy.Time.now()
+            count = count + 1
+            current_time = rospy.Time.now()
+            time_passed = current_time.secs - init_time.secs
 
-            # loop every 1 second
+            #if self.location_unknown:
+                #return 'go_find'
+            if (time_passed > random.randint(240,360)):
+                ## after 4-6 minutes return to Normal state
+                return 'stop_play'
+
+            
+
+            # loop 
             self.rate.sleep()
 
-    ## method get_ball_detection
+    ## method get_home_reached
     #
-    # subscriber callback for ball detection
-    def get_ball_detection(self, ball):
-        self.ball_detected = ball.data
+    # subscriber callback for room location knowledge
+    def get_location_unknown(self, room):
+        self.location_unknown = room.data
         
     
 ## function main 
