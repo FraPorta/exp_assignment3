@@ -29,8 +29,7 @@ class Normal(smach.State):
         smach.State.__init__(self, 
                              outcomes=['go_to_sleep','go_play','go_track']
                             )
-        
-        self.ball_detected = False
+
         self.rate = rospy.Rate(20)  # Loop at 20Hz
 
     ## method execute
@@ -39,6 +38,9 @@ class Normal(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Executing state NORMAL')
         pub_state.publish("normal")
+
+        
+        self.ball_detected = False
 
         ## check if a voice command is received
         rospy.Subscriber("/ball_detected", Bool, self.get_ball_detection)
@@ -54,13 +56,13 @@ class Normal(smach.State):
             current_time = rospy.Time.now()
             time_passed = current_time.secs - init_time.secs
 
-            if (self.ball_detected and time_passed > 5):
-                ## If the robot sees the ball goes to the Track substate (until it just returned from the track state)
+            #if (self.ball_detected and time_passed > 5):
+            if (self.ball_detected):
+                ## If the robot sees the ball goes to the Track substate
                 return 'go_track'
                     
             elif (random.randint(1,1000000) == 1 and time_passed > 30): # RICORDATI DI CAMBIARE RATE
                 ## go to sleep at random 
-                #  (1/10000 chances per iteration -> 100 iterations per second -> 1/100 chance per second passed in Normal state)
                 return 'go_to_sleep'
                     
             self.rate.sleep()
@@ -84,7 +86,7 @@ class Track(smach.State):
                              outcomes=['return_normal']
                             )
         
-        self.ball_reached = False
+        
         self.rate = rospy.Rate(20)  # Loop at 20Hz
 
     ## method execute
@@ -93,6 +95,7 @@ class Track(smach.State):
     def execute(self, userdata):
         rospy.loginfo('Executing state TRACK')
         pub_state.publish("track")
+        self.ball_reached = False
 
         ## check if the ball is detected
         rospy.Subscriber("/ball_reached", Bool, self.get_ball_reached)

@@ -106,11 +106,11 @@ class ball_tracking:
         sumBlue = np.sum(maskBlue)
         sumMagenta = np.sum(maskMagenta)
 
-        rospy.loginfo([sumGreen, sumBlack, sumRed, sumYellow, sumBlue, sumMagenta])
+        #rospy.loginfo([sumGreen, sumBlack, sumRed, sumYellow, sumBlue, sumMagenta])
         sumArray = np.array([sumGreen, sumBlack, sumRed, sumYellow, sumBlue, sumMagenta])
-        #thresh = 10000
         max_ind = np.argmax(sumArray)
-    
+ 
+        # return the mask related to the colour with higher value of detection
         if max_ind == 0:
             return [maskGreen, 'Green']
         elif max_ind == 1:
@@ -129,7 +129,6 @@ class ball_tracking:
     # method follow_ball
     #
     # publish velocities to follow the ball
-
     def follow_ball(self):
         if self.ball_reached:
             # if the ball stops, stop completely the robot
@@ -151,18 +150,11 @@ class ball_tracking:
                     twist_msg = Twist()
                     twist_msg.linear.x = 0.4
                     self.vel_pub.publish(twist_msg)
-            # if the ball is not detected search it
-            # elif not self.ball_detected:
-            #  twist_msg = Twist()
-            #  twist_msg.angular.z = 0.9
-
-            #  self.vel_pub.publish(twist_msg)
 
     # method callback
     #
     # Callback function of subscribed topic.
     # Here images get converted and features detected
-
     def callback(self, ros_data):
 
         if VERBOSE:
@@ -184,12 +176,12 @@ class ball_tracking:
         maskYellow = cv2.inRange(hsv, yellowLower, yellowUpper)
         maskBlue = cv2.inRange(hsv, blueLower, blueUpper)
         maskMagenta = cv2.inRange(hsv, magentaLower, magentaUpper)
-
+        # choose the correct mask
         mask_colour = self.get_mask_colour(maskGreen, maskBlack, maskRed, maskYellow, maskBlue, maskMagenta)
 
         mask = cv2.erode(mask_colour[0], None, iterations=2)
         mask = cv2.dilate(mask, None, iterations=2)
-        cv2.imshow('mask', mask)
+        # cv2.imshow('mask', mask)
         cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
                                 cv2.CHAIN_APPROX_SIMPLE)
         cnts = imutils.grab_contours(cnts)
@@ -208,34 +200,28 @@ class ball_tracking:
             M = cv2.moments(c)
             self.center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 
-            rospy.loginfo(mask_colour[1])
+            # rospy.loginfo(mask_colour[1])
             # rospy.loginfo(self.colour)
+            
+            self.ball_detected = True
 
-            # set ball detected to True if the colour detected is different from the last one
-            if mask_colour[1] != self.colour:
-                #
+            # only proceed if the radius meets a minimum size
+            if radius > 10:
+                # draw the circle and centroid on the frame,
+                # then update the list of tracked points
+                cv2.circle(image_np, (int(x), int(y)), int(radius),
+                           (0, 255, 255), 2)
+                cv2.circle(image_np, self.center, 5, (0, 0, 255), -1)
 
-                #
-                self.ball_detected = True
-
-                # only proceed if the radius meets a minimum size
-                if radius > 10:
-                    # draw the circle and centroid on the frame,
-                    # then update the list of tracked points
-                    cv2.circle(image_np, (int(x), int(y)), int(radius),
-                               (0, 255, 255), 2)
-                    cv2.circle(image_np, self.center, 5, (0, 0, 255), -1)
-
-                    self.near_ball = True
-                else:
-                    self.near_ball = False
+                self.near_ball = True
             else:
-                self.ball_detected = False
+                self.near_ball = False
+            
         else:
             self.ball_detected = False
 
         # publish if the ball has been detected
-        self.pubBall.publish(self.ball_detected)
+        #self.pubBall.publish(self.ball_detected)
 
         # update the points queue
         # pts.appendleft(center)
@@ -251,20 +237,38 @@ class ball_tracking:
                     # signal that the ball has been reached
                     self.ball_reached = True
                     self.colour = mask_colour[1]
-                    self.save_info()
+                    # stop the robot completely
+                    self.follow_ball()
+                    #save information about ball position
+                    self.save_info(self.colour)
+                    rospy.loginfo("The ball has been reached!")
+                    # publish that the ball has been reached
                     self.pub_reach.publish(self.ball_reached)
-                    rospy.sleep(2)
+
+                    # reinitialize variable
                     self.ball_reached = False
 
-            # track the ball if it is different from the last tracked ball
-            if mask_colour[1] != self.colour:
-                self.follow_ball()
+            # track the ball 
+            self.follow_ball()
+            
 
-    def save_info(self):
-        pos_name = self.colour
-        if(rospy.search_param(pos_name) != None):
-            rospy.loginfo("Saving position of the %s ball", pos_name)
-            rospy.set_param(pos_name, self.current_pos)
+        # publish if the ball has been detected
+        if mask_colour[1] != self.colour:
+            self.pubBall.publish(self.ball_detected)
+        else:
+            self.pubBall.publish(False)
+
+
+    ## method save_info
+    #
+    # Saves the position of the tracked ball
+    def save_info(self, colour):
+        rospy.loginfo("Saving position of the %s ball", colour)
+       
+        ball_pos = [self.current_pos.x, self.current_pos.y]
+        rospy.loginfo("Ball Position: %s", str(ball_pos))
+
+        rospy.set_param(colour, ball_pos)
 
 
 # function main
@@ -274,11 +278,7 @@ def main(args):
     # initialize ball tracking node
     rospy.init_node('ball_tracking', anonymous=True)
 
-    #global pubHeadPos
-
     rate = rospy.Rate(100)
-
-    #pubHeadPos = rospy.Publisher("/robot/joint_position_controller/command", Float64, queue_size=1)
 
     # Initializes class
     bt = ball_tracking()
