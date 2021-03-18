@@ -5,6 +5,7 @@
 # state machine to control the behaviour of the pet
 # States: NORMAL, SLEEP, PLAY, TRACKNORMAL, FIND, TRACKFIND
 
+import os
 import rospy
 import smach
 import smach_ros
@@ -300,14 +301,21 @@ class Find(smach.State):
 
         rospy.Subscriber("/ball_detected", Bool, self.get_ball_detection)
         #rospy.Subscriber("/no_room", Bool, self.get_no_room)
-        ## launch explore-lite package
-        package = 'explore_lite'
-        executable = 'explore'
-        node = roslaunch.core.Node(package, executable)
 
-        launch = roslaunch.scriptapi.ROSLaunch()
+        rospy.loginfo("Path is: %s", os.path.dirname(os.path.abspath(__file__)))
+        rospy.loginfo("Path is: %s", os.path.abspath(os.getcwd()))
+        
+
+        ## launch explore-lite package
+        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+        roslaunch.configure_logging(uuid)
+        launch = roslaunch.parent.ROSLaunchParent(uuid, ["/home/francesco/expRob_ws/src/exp_assignment3/launch/explore.launch"])
         launch.start()
-        process = launch.launch(node)
+        rospy.loginfo("explore_lite started")
+
+       
+        
+        
 
         # init timer
         count = 0
@@ -321,26 +329,29 @@ class Find(smach.State):
             current_time = rospy.Time.now()
             time_passed = current_time.secs - init_time.secs
 
-            if (time_passed > random.randint(240,360)):
+            if (time_passed > random.randint(300,600)):
                 # stop explore-lite
-                process.stop()
+                launch.shutdown()
+                rospy.loginfo("Stopped explore_lite")
                 ## after 4-6 minutes return to Play state
                 return 'return_play'
 
             if self.ball_detected:
                 # stop explore-lite
-                process.stop()
+                launch.shutdown()
+                rospy.loginfo("Stopped explore_lite")
+                
                 ## If the robot sees the ball goes to the Track substate
                 return 'go_track'      
 
             # loop 
             self.rate.sleep()
         
-        ## method get_ball_detection
-        #
-        # subscriber callback for ball detection
-        def get_ball_detection(self, ball):
-            self.ball_detected = ball.data
+    ## method get_ball_detection
+    #
+    # subscriber callback for ball detection
+    def get_ball_detection(self, ball):
+        self.ball_detected = ball.data
         
         #def get_no_room(self, room):
         #    self.room_unknown = room.data

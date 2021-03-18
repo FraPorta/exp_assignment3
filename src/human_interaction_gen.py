@@ -46,10 +46,10 @@ def main():
     rospy.Subscriber("/human_reached", Bool, get_human_reached)
 
     while not rospy.is_shutdown():
-        if random.randint(1,1000) == 1: ######## change probability!!!
+        if random.randint(1,10) == 1: ######## change probability!!!
             # publish play command
             pub_play.publish(True)
-            rospy.loginfo("Human have sent a PLAY command!")
+            #rospy.loginfo("Human have sent a PLAY command!")
             # rospy.sleep(random.randint(30,60)) ######## change time!!
 
         if human_reached:

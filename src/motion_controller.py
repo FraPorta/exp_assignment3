@@ -163,6 +163,7 @@ def move_play():
             human_reached = False
             # signal that the location is not known
             pub_no_room.publish(True)
+            pub_human_reached.publish(human_reached)
 
         elif room_pos != None:
             goal_pos.target_pose.header.frame_id = "map"

@@ -213,7 +213,7 @@ class ball_tracking:
         else:
             state_description = 'unknown case'
             #rospy.loginfo(regions)
-        rospy.loginfo(state_description)
+        #rospy.loginfo(state_description)
 
     # method get_mask_colour
     #
@@ -353,11 +353,11 @@ class ball_tracking:
                         # get the colour of the room that we want to track
                         room_colour = rospy.get_param(self.room)
                         if self.colour == room_colour:
-                            rospy.loginfo("The %s has been found! Returning to the PLAY behaviour...", self.room)
-                            self.pub_room_found(True)
+                            rospy.loginfo("The %s (%s) has been found! Returning to the PLAY behaviour...", self.room, room_colour)
+                            self.pub_room_found.publish(True)
                         else:
-                            rospy.loginfo("The %s has not been found! Returning to the FIND behaviour", self.room)
-                            self.pub_room_found(False)
+                            rospy.loginfo("The %s (%s) has not been found! Returning to the FIND behaviour", self.room, room_colour)
+                            self.pub_room_found.publish(False)
 
                     # publish that the ball has been reached
                     self.pub_reach.publish(self.ball_reached)
@@ -370,12 +370,15 @@ class ball_tracking:
                     # track the ball 
                     self.follow_ball()
             
-
+        
         # publish if the ball has been detected
         if mask_colour[1] != self.colour:
             self.pub_ball.publish(self.ball_detected)
         else:
             self.pub_ball.publish(False)
+
+        
+
 
 
     # method save_info
