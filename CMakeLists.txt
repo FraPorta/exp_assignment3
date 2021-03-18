@@ -32,52 +32,56 @@ catkin_package(
   nav_msgs
   std_msgs
   visualization_msgs
+  DEPENDS OpenCV
 )
 
 ###########
 ## Build ##
 ###########
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+#set(CMAKE_CXX_STANDARD 11)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#set(CMAKE_CXX_EXTENSIONS OFF)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
+# include
   ${catkin_INCLUDE_DIRS}
-  include
 )
 
-add_executable(exp_assignment3
-  src/costmap_client.cpp
-  src/explore.cpp
-  src/frontier_search.cpp
+install(PROGRAMS
+  src/ball_tracking.py
+  src/behaviour_controller.py
+  src/human_interaction_gen.py
+  src/motion_controller.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-add_dependencies(exp_assignment3 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(exp_assignment3 ${catkin_LIBRARIES})
+
+#add_dependencies(exp_assignment3 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#target_link_libraries(exp_assignment3 ${catkin_LIBRARIES})
 
 #############
 ## Install ##
 #############
 
 # install nodes
-install(TARGETS exp_assignment3
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+#install(TARGETS exp_assignment3
+ # ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+ # LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+ # RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+#)
 
 # install roslaunch files
-install(DIRECTORY launch/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-)
+#install(DIRECTORY launch/
+#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+#)
 
 #############
 ## Testing ##
 #############
-if(CATKIN_ENABLE_TESTING)
-  find_package(roslaunch REQUIRED)
+#if(CATKIN_ENABLE_TESTING)
+#  find_package(roslaunch REQUIRED)
 
   # test all launch files
-  roslaunch_add_file_check(launch)
-endif()
+#  roslaunch_add_file_check(launch)
+#endif()

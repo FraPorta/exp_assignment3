@@ -28,7 +28,7 @@ TrajectoryPlannerROS:
   pdist_scale: 5.0
   gdist_scale: 0.0
   occdist_scale: 5.0
-  heading_lookahead: 5.0
+  heading_lookahead: 3.0
   dwa: false
   global_frame_id: map
 

@@ -22,7 +22,7 @@ import roslib
 import rospy
 
 # Ros Messages
-from sensor_msgs.msg import CompressedImage, LaserScan
+from sensor_msgs.msg import CompressedImage, JointState
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool, String, Float64
 from nav_msgs.msg import Odometry
@@ -51,7 +51,6 @@ magentaLower = (125, 50, 50)
 magentaUpper = (150, 255, 255)
 
 
-
 # class ball_tracking
 #
 # implements a ball tracking algorithm using cv2
@@ -69,28 +68,16 @@ class ball_tracking:
         self.ball_reached = False
         self.colour = None
         self.current_pos = None
-        self.room = None
-
-
-        self.regions_ = {
-            'right': 0,
-            'fright': 0,
-            'front': 0,
-            'fleft': 0,
-            'left': 0,
-        }
 
         # publishers
         self.vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
-        self.pub_ball = rospy.Publisher("/ball_detected", Bool, queue_size=1)
+        self.pubBall = rospy.Publisher("/ball_detected", Bool, queue_size=1)
         self.pub_reach = rospy.Publisher("/ball_reached", Bool, queue_size=1)
-        self.pub_room_found = rospy.Publisher("/room_found", Bool, queue_size=1)
+
         # subscriber to camera
         self.cam_sub = rospy.Subscriber(
             "/camera1/image_raw/compressed", CompressedImage, self.callback,  queue_size=1)
         self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
-        self.laser_sub = rospy.Subscriber('/scan', LaserScan, self.clbk_laser)
-        self.room_sub = rospy.Subscriber('/go_to_command', String, self.get_room)
 
         # subscriber to current behaviour
         rospy.Subscriber("/behaviour", String, self.get_behaviour)
@@ -98,122 +85,15 @@ class ball_tracking:
     # method get_behaviour
     #
     # subscriber callback to the behaviour topic
+
     def get_behaviour(self, state):
         self.behaviour = state.data
 
     # method get_behaviour
     #
     # subscriber callback to the behaviour topic
-    def get_room(self, room):
-        self.room = room.data
-
-    # method odom_callback
-    #
-    # subscriber callback to the odometry topic
     def odom_callback(self, msg):
         self.current_pos = msg.pose.pose.position
-
-    # method clbk_laser
-    #
-    # subscriber callback for the laser topic
-    def clbk_laser(self, msg):
-
-        self.regions_ = {
-            'right':  min(min(msg.ranges[0:143]), 10),
-            'fright': min(min(msg.ranges[144:287]), 10),
-            'front':  min(min(msg.ranges[288:431]), 10),
-            'fleft':  min(min(msg.ranges[432:575]), 10),
-            'left':   min(min(msg.ranges[576:713]), 10),
-        }
-
-    ## method follow_avoid_obstacles
-    #
-    # sends velocities to the robot to reach the ball avoiding obstacles
-    def follow_avoid_obstacles(self):
-        regions = self.regions_
-        msg = Twist()
-        angular_z = -0.003*(self.center[0] - 400)
-        linear_x = -0.01*(self.radius - 100)
-        state_description = ''
-
-        # linear velocity saturation
-        if linear_x > 0.4:
-            linear_x = 0.4
-
-        # this works
-        #d0 = 0.15
-        #d = 0.30
-
-        d0 = 0.1
-        d = 0.15
-
-        if regions['front'] > d0 and regions['fleft'] > d and regions['fright'] > d:
-            state_description = 'case 1 - nothing'
-            # # go towards the ball
-            twist_msg = Twist()
-            twist_msg.linear.x = linear_x
-            twist_msg.angular.z = angular_z
-            self.vel_pub.publish(twist_msg)
-
-        elif regions['front'] < d0 and regions['fleft'] > d and regions['fright'] > d:
-            state_description = 'case 2 - front'
-            # turn
-            twist_msg = Twist()
-            twist_msg.linear.x = 0
-            twist_msg.angular.z = 0.3
-            self.vel_pub.publish(twist_msg)
-
-        elif regions['front'] > d0 and regions['fleft'] > d and regions['fright'] < d:
-            state_description = 'case 3 - fright'
-            # turn left a little
-            twist_msg = Twist()
-            twist_msg.linear.x = 0
-            twist_msg.angular.z = 0.3
-            self.vel_pub.publish(twist_msg)
-
-        elif regions['front'] > d0 and regions['fleft'] < d and regions['fright'] > d:
-            state_description = 'case 4 - fleft'
-            # turn right a little
-            twist_msg = Twist()
-            twist_msg.linear.x = 0
-            twist_msg.angular.z = -0.3
-            self.vel_pub.publish(twist_msg)
-            
-        elif regions['front'] < d0 and regions['fleft'] > d and regions['fright'] < d:
-            state_description = 'case 5 - front and fright'
-            # turn right a little
-            twist_msg = Twist()
-            twist_msg.linear.x = 0
-            twist_msg.angular.z = 0.3
-            self.vel_pub.publish(twist_msg)
-
-        elif regions['front'] < d0 and regions['fleft'] < d and regions['fright'] > d:
-            state_description = 'case 6 - front and fleft'
-            # turn right a little
-            twist_msg = Twist()
-            twist_msg.linear.x = 0
-            twist_msg.angular.z = -0.3
-            self.vel_pub.publish(twist_msg)
-
-        elif regions['front'] < d0 and regions['fleft'] < d and regions['fright'] < d:
-            state_description = 'case 7 - front and fleft and fright'
-            # go towards the ball
-            twist_msg = Twist()
-            twist_msg.angular.z = linear_x
-            twist_msg.linear.x = angular_z
-            self.vel_pub.publish(twist_msg)
-
-        elif regions['front'] > d0 and regions['fleft'] < d and regions['fright'] < d:
-            state_description = 'case 8 - fleft and fright'
-            # go towards the ball
-            twist_msg = Twist()
-            twist_msg.angular.z = linear_x
-            twist_msg.linear.x = angular_z
-            self.vel_pub.publish(twist_msg)
-        else:
-            state_description = 'unknown case'
-            #rospy.loginfo(regions)
-        rospy.loginfo(state_description)
 
     # method get_mask_colour
     #
@@ -247,17 +127,47 @@ class ball_tracking:
         else:
             return [maskGreen, 'None']    # default (the masks are all zeroes)
 
+    '''
+    # method follow_ball
+    #
+    # publish velocities to follow the ball
+    def follow_ball(self):
+        if self.ball_reached:
+            # if the ball stops, stop completely the robot
+            twist_msg = Twist()
+            twist_msg.angular.z = 0.0
+            twist_msg.linear.x = 0.0
+            self.vel_pub.publish(twist_msg)
+        else:
+            # if the ball is detected go towards it and start following it
+            if self.ball_detected:
+                if self.near_ball:
+                    # if near enough to the ball start following it
+                    twist_msg = Twist()
+                    twist_msg.angular.z = -0.003*(self.center[0] - 400)
+                    twist_msg.linear.x = -0.01*(self.radius - 100)
+                    self.vel_pub.publish(twist_msg)
+                else:
+                    # if not near enough go towards the ball
+                    twist_msg = Twist()
+                    twist_msg.linear.x = 0.4
+                    self.vel_pub.publish(twist_msg)
+    '''
+
     # method follow_ball
     #
     # publish velocities to follow the ball
     def follow_ball(self):
         if self.near_ball:
             # if near enough to the ball start following it
-            self.follow_avoid_obstacles()
+            twist_msg = Twist()
+            twist_msg.angular.z = -0.003*(self.center[0] - 400)
+            twist_msg.linear.x = -0.01*(self.radius - 100)
+            self.vel_pub.publish(twist_msg)
         else:
             # if not near enough go towards the ball
             twist_msg = Twist()
-            twist_msg.linear.x = 0.4
+            twist_msg.linear.x = 0.5
             self.vel_pub.publish(twist_msg)
         
     # method callback
@@ -334,8 +244,8 @@ class ball_tracking:
         cv2.imshow('window', image_np)
         cv2.waitKey(2)
 
-        # if behaviour is track_normal, go near the ball
-        if self.behaviour == "track_normal" or self.behaviour == "track_find":
+        # if behaviour is track, go near the ball
+        if self.behaviour == "track_normal":
             if self.ball_detected or self.near_ball:
                 angular_z = -0.003*(self.center[0] - 400)
                 linear_x = -0.01*(self.radius - 100)
@@ -348,17 +258,6 @@ class ball_tracking:
                     # save information about ball position
                     self.save_info(self.colour)
                     rospy.loginfo("The ball has been reached!")
-
-                    if self.behaviour == "track_find":
-                        # get the colour of the room that we want to track
-                        room_colour = rospy.get_param(self.room)
-                        if self.colour == room_colour:
-                            rospy.loginfo("The %s has been found! Returning to the PLAY behaviour...", self.room)
-                            self.pub_room_found(True)
-                        else:
-                            rospy.loginfo("The %s has not been found! Returning to the FIND behaviour", self.room)
-                            self.pub_room_found(False)
-
                     # publish that the ball has been reached
                     self.pub_reach.publish(self.ball_reached)
 
@@ -373,9 +272,9 @@ class ball_tracking:
 
         # publish if the ball has been detected
         if mask_colour[1] != self.colour:
-            self.pub_ball.publish(self.ball_detected)
+            self.pubBall.publish(self.ball_detected)
         else:
-            self.pub_ball.publish(False)
+            self.pubBall.publish(False)
 
 
     # method save_info
@@ -402,9 +301,9 @@ def main(args):
     # Initializes class
     bt = ball_tracking()
 
-    #while not rospy.is_shutdown():
+    while not rospy.is_shutdown():
 
-    rate.sleep()
+        rate.sleep()
 
     try:
         rospy.spin()

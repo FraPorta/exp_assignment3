@@ -18,5 +18,7 @@
   <node name="behaviour_controller" pkg="exp_assignment3" type="behaviour_controller.py" output="screen" />
   <node name="motion_controller" pkg="exp_assignment3" type="motion_controller.py" output="screen" />
   <node name="ball_tracking" pkg="exp_assignment3" type="ball_tracking.py" output="screen" />
+  <node name="human_interaction_gen" pkg="exp_assignment3" type="human_interaction_gen.py" output="screen" />
+
 
 </launch>

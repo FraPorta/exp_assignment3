@@ -2,7 +2,7 @@
 
 ## @package human_interaction_gen
 #
-# Human interactions with the ball: makes the ball move or go underground
+# Human interactions with the robot: sends play commands and goTo + location command
 
 import rospy
 import random
@@ -13,6 +13,7 @@ from std_msgs.msg import String, Bool
 
 pub_play = None
 pub_go_to = None
+human_reached = None
 
 ## function get_random_position
 #
@@ -22,22 +23,48 @@ def get_random_position():
     randPos = pos_array[random.randint(0, 5)]
     return randPos
 
+## function get_home_reached
+#
+# subscriber callback, gets if the robot is in the home position
+def get_human_reached(home):  
+    global human_reached
+    human_reached = home.data
     
 ## function main
 #
 # initialize node, action client and makes the ball move on the map or underground
 def main():
+    global pub_play, pub_go_to, human_reached
+
     # init node
     rospy.init_node("human_interaction_generator")
     rate = rospy.Rate(20)
 
     pub_play = rospy.Publisher("/play_command", Bool, queue_size=1)
     pub_go_to = rospy.Publisher("/go_to_command", String, queue_size=1)
-   
+
+    rospy.Subscriber("/human_reached", Bool, get_human_reached)
 
     while not rospy.is_shutdown():
+        if random.randint(1,1000) == 1: ######## change probability!!!
+            # publish play command
+            pub_play.publish(True)
+            rospy.loginfo("Human have sent a PLAY command!")
+            # rospy.sleep(random.randint(30,60)) ######## change time!!
+
+        if human_reached:
+            rospy.loginfo("Human: 'Robot is in front of me!'")
+                
+            # wait random time
+            rospy.sleep(random.randint(2,5))
+            pos = get_random_position()
+            rospy.loginfo("Human says: go to the %s", pos)
+            # publish goto command
+            pub_go_to.publish(pos)
+            # reinit 
+            human_reached = False
+
         
-        rospy.sleep(random.randint(7,10))
 
         rate.sleep()
 
