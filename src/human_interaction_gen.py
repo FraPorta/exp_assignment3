@@ -52,13 +52,11 @@ def main():
             #rospy.loginfo("Human have sent a PLAY command!")
             # rospy.sleep(random.randint(30,60)) ######## change time!!
 
-        if human_reached:
-            rospy.loginfo("Human: 'Robot is in front of me!'")
-                
+        if human_reached:    
             # wait random time
             rospy.sleep(random.randint(2,5))
             pos = get_random_position()
-            rospy.loginfo("Human says: go to the %s", pos)
+            rospy.loginfo("Human says: go to the %s (%s)", pos, rospy.get_param(pos))
             # publish goto command
             pub_go_to.publish(pos)
             # reinit 

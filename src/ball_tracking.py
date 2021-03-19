@@ -347,8 +347,9 @@ class ball_tracking:
                     
                     # save information about ball position
                     self.save_info(self.colour)
-                    rospy.loginfo("The ball has been reached!")
-
+                    
+                    rospy.sleep(2)
+                    # rospy.loginfo("The ball has been reached!")
                     if self.behaviour == "track_find":
                         # get the colour of the room that we want to track
                         room_colour = rospy.get_param(self.room)
@@ -376,9 +377,6 @@ class ball_tracking:
             self.pub_ball.publish(self.ball_detected)
         else:
             self.pub_ball.publish(False)
-
-        
-
 
 
     # method save_info

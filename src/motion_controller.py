@@ -39,6 +39,8 @@ pub_no_room = rospy.Publisher("/no_room",Bool, queue_size=1)
 home_reached = False
 human_reached = False
 
+rate = None
+
 ## function get_random_position
 #
 # get a random position on the map
@@ -52,12 +54,18 @@ def get_random_position():
 #
 # function to check if the room position is known
 def get_room_pos():
-    global room, room_pos
+    while(not rospy.is_shutdown()):
+        if (room != None):
+            break
+        rate.sleep()
+
     colour = rospy.get_param(room)
     if rospy.search_param(colour) != None:
         room_pos = rospy.get_param(colour)
     else:
-        room_pos = "no_room"
+        #room_pos = "no_room"
+        room_pos = None
+    return room_pos
     
 
 ## function get_behaviour
@@ -73,7 +81,7 @@ def get_behaviour(state):
 def get_go_to_command(command):
     global room
     room = command.data 
-    get_room_pos()
+    
 
 ## function feedback_cb
 #
@@ -124,7 +132,7 @@ def move_sleep():
     goal_pos.target_pose.pose.orientation.w = 2
     # send robot position and wait that the goal is reached
     act_c.send_goal(goal_pos)
-    rospy.loginfo("Robot goal position sent!")
+    rospy.loginfo("Robot returns home...")
     rospy.loginfo(goal_pos.target_pose.pose.position)
     act_c.wait_for_result(rospy.Duration.from_sec(240.0))
     result = act_c.get_result()
@@ -136,7 +144,7 @@ def move_sleep():
 #
 # movement in the PLAY state
 def move_play():
-    global human_reached, room_pos
+    global human_reached, room
 
     if not human_reached:
         goal_pos.target_pose.header.frame_id = "map"
@@ -157,33 +165,38 @@ def move_play():
             room_pos = None
             pub_human_reached.publish(human_reached)
     else:
-        if room_pos == "no_room":
+        room_position = get_room_pos()
+        # if the room position is unknown, publish to 'no_room' topic (go to Find behaviour)
+        if  room_position == None:
             rospy.loginfo("The location is unknown!")
-            room_pos = None
-            human_reached = False
+        
             # signal that the location is not known
             pub_no_room.publish(True)
-            pub_human_reached.publish(human_reached)
+            pub_human_reached.publish(False)
+            rospy.sleep(2)
+            human_reached = False
 
-        elif room_pos != None:
+        # if the room position is known, reach the room
+        elif room_position != None:
             goal_pos.target_pose.header.frame_id = "map"
             goal_pos.target_pose.header.stamp = rospy.Time.now()
             # set robot goal position
-            goal_pos.target_pose.pose.position.x = room_pos[0]
-            goal_pos.target_pose.pose.position.y = room_pos[1]
+            goal_pos.target_pose.pose.position.x = room_position[0]
+            goal_pos.target_pose.pose.position.y = room_position[1]
             goal_pos.target_pose.pose.position.z = 0
             goal_pos.target_pose.pose.orientation.w = 2
             # send robot position and wait that the goal is reached within 60 seconds
             act_c.send_goal(goal_pos)
-            rospy.loginfo("Robot going to the %s", room)
-            rospy.loginfo(goal_pos.target_pose.pose.position)
+            rospy.loginfo("Robot going to the %s (%s)", room, rospy.get_param(room))
+            #rospy.loginfo(goal_pos.target_pose.pose.position)
             act_c.wait_for_result(rospy.Duration.from_sec(240.0))
             result = act_c.get_result()
             if result:
-                rospy.loginfo("Robot has reached the %s in time", room)
+                rospy.loginfo("Robot has reached the %s (%s) in time", room, rospy.get_param(room))
                 # wait some time before returning to the human
                 rospy.sleep(random.randint(5,10))
                 human_reached = False
+                room = None
                 
 
 ## function main
@@ -192,8 +205,9 @@ def move_play():
 def main():
     # init node
     rospy.init_node("motion_controller")
+    global act_c, home_reached, human_reached, rate
+
     rate = rospy.Rate(20)
-    global act_c, home_reached, human_reached
 
     # subscriber to go_to command
     rospy.Subscriber("/go_to_command", String, get_go_to_command)
@@ -225,6 +239,8 @@ def main():
             
             if behaviour == "play":
                 move_play()
+                
+        rate.sleep()
             
 
 

@@ -11,9 +11,10 @@ import smach
 import smach_ros
 import random
 import roslaunch
+import actionlib
 from std_msgs.msg import String
 from std_msgs.msg import Bool
-
+from move_base_msgs.msg import MoveBaseAction
 
 ## current behaviour publisher
 pub_state = rospy.Publisher("/behaviour",String,queue_size=1)
@@ -288,6 +289,10 @@ class Find(smach.State):
                             )
         self.rate = rospy.Rate(20)
 
+        # Create the action client and wait for the server
+        self.movebaseClient = actionlib.SimpleActionClient("/move_base", MoveBaseAction)
+        self.movebaseClient.wait_for_server()
+
     ## method execute
     #
     # state execution
@@ -296,26 +301,29 @@ class Find(smach.State):
         pub_state.publish("find")
         
         
+
         self.ball_detected = False
         #self.room_unknown = False
 
         rospy.Subscriber("/ball_detected", Bool, self.get_ball_detection)
         #rospy.Subscriber("/no_room", Bool, self.get_no_room)
-
-        rospy.loginfo("Path is: %s", os.path.dirname(os.path.abspath(__file__)))
-        rospy.loginfo("Path is: %s", os.path.abspath(os.getcwd()))
+        '''
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        launch_path = "/exp_assignment3/launch/explore.launch"
+        final_path = os.path.join(dir_path, launch_path)
+        rospy.loginfo("Path is: %s", final_path)
+        '''
         
-
         ## launch explore-lite package
-        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-        roslaunch.configure_logging(uuid)
-        launch = roslaunch.parent.ROSLaunchParent(uuid, ["/home/francesco/expRob_ws/src/exp_assignment3/launch/explore.launch"])
-        launch.start()
-        rospy.loginfo("explore_lite started")
+        package = 'explore_lite'
+        node_type = 'explore'
+        node_name = 'explore'
+        node = roslaunch.core.Node(package, node_type, node_name)
 
-       
-        
-        
+        launch = roslaunch.scriptapi.ROSLaunch()
+        launch.start()
+
+        process = launch.launch(node)
 
         # init timer
         count = 0
@@ -329,19 +337,24 @@ class Find(smach.State):
             current_time = rospy.Time.now()
             time_passed = current_time.secs - init_time.secs
 
+            ## after 4-6 minutes return to Play state
             if (time_passed > random.randint(300,600)):
                 # stop explore-lite
-                launch.shutdown()
-                rospy.loginfo("Stopped explore_lite")
-                ## after 4-6 minutes return to Play state
+                self.movebaseClient.cancel_all_goals()
+                process.stop()
+                if not process.is_alive():
+                    rospy.loginfo("Stopped explore_lite")
+                
                 return 'return_play'
 
+            ## If the robot sees the ball goes to the Track substate
             if self.ball_detected:
                 # stop explore-lite
-                launch.shutdown()
-                rospy.loginfo("Stopped explore_lite")
+                self.movebaseClient.cancel_all_goals()
+                process.stop()
+                if not process.is_alive():
+                    rospy.loginfo("Stopped explore_lite")
                 
-                ## If the robot sees the ball goes to the Track substate
                 return 'go_track'      
 
             # loop 
@@ -352,9 +365,6 @@ class Find(smach.State):
     # subscriber callback for ball detection
     def get_ball_detection(self, ball):
         self.ball_detected = ball.data
-        
-        #def get_no_room(self, room):
-        #    self.room_unknown = room.data
     
 ## function main 
 #
