@@ -175,6 +175,7 @@ def move_play():
             pub_human_reached.publish(False)
             rospy.sleep(2)
             human_reached = False
+            room = None
 
         # if the room position is known, reach the room
         elif room_position != None:
@@ -194,9 +195,10 @@ def move_play():
             if result:
                 rospy.loginfo("Robot has reached the %s (%s) in time", room, rospy.get_param(room))
                 # wait some time before returning to the human
-                rospy.sleep(random.randint(5,10))
+                rospy.sleep(random.randint(3,10))
                 human_reached = False
                 room = None
+                room_position = None
                 
 
 ## function main
