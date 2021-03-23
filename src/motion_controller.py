@@ -2,7 +2,7 @@
 
 ## @package motion_controller
 #
-# makes the robot move in the map respecting the normal and sleep behaviour
+# makes the robot move in the map respecting the normal, sleep and play behaviour
 
 import rospy
 import random

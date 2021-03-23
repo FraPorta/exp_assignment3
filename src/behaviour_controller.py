@@ -2,7 +2,7 @@
 
 ## @package behaviour_controller
 #
-# state machine to control the behaviour of the pet
+# state machine to control the behaviour of the robot
 # States: NORMAL, SLEEP, PLAY, TRACKNORMAL, FIND, TRACKFIND
 
 import os
@@ -43,11 +43,12 @@ class Normal(smach.State):
         self.play_command = False
         self.ball_detected = False
 
-        ## check if a voice command is received
+        ## subscribers
         rospy.Subscriber("/ball_detected", Bool, self.get_ball_detection)
         rospy.Subscriber("/play_command", Bool, self.get_play_command)
-        count = 0
 
+        # initialization of time counter
+        count = 0
         init_time = rospy.Time.now()
 
         while not rospy.is_shutdown():  
@@ -69,9 +70,7 @@ class Normal(smach.State):
             elif (random.randint(1,rospy.get_param("sleep_freq")) == 1 and time_passed > 10):
                 ## go to sleep at random 
                 return 'go_to_sleep'
-            
-        
-                    
+                
             self.rate.sleep()
     
     ## method get_ball_detection
@@ -90,7 +89,7 @@ class Normal(smach.State):
 
 ## class state TrackNormal
 #
-# track behaviour of the pet when arriving from Normal state
+# track behaviour of the robot when arriving from Normal state
 class TrackNormal(smach.State):
     ## method init
     #
@@ -111,27 +110,27 @@ class TrackNormal(smach.State):
         pub_state.publish("track_normal")
         self.ball_reached = False
 
-        ## check if the ball is detected
+        ## check if the ball is reached
         rospy.Subscriber("/ball_reached", Bool, self.get_ball_reached)
 
         while not rospy.is_shutdown():  
 
             if (self.ball_reached):
-                ## If the robot does not detect the ball anymore return to the Normal state
+                ## If the robot reaches the ball anymore return to the Normal state
                 return 'return_normal'
 
             self.rate.sleep()
     
-    ## method get_ball_detection
+    ## method get_ball_reached
     #
-    # subscriber callback for ball detection
+    # subscriber callback for ball reaching
     def get_ball_reached(self, ball):
         self.ball_reached = ball.data
 
 
 ## class state TrackFind
 #
-# track behaviour of the pet when arriving from Find state
+# track behaviour of the robot when arriving from Find state
 class TrackFind(smach.State):
     ## method init
     #
@@ -169,9 +168,9 @@ class TrackFind(smach.State):
 
             self.rate.sleep()
     
-    ## method get_ball_detection
+    ## method get_ball_reached
     #
-    # subscriber callback for ball detection
+    # subscriber callback for ball reached
     def get_ball_reached(self, ball):
         self.ball_reached = ball.data
     
@@ -261,8 +260,8 @@ class Play(smach.State):
             if self.location_unknown:
                 ## if the location sent by the human is unknown, go to the FIND state
                 return 'go_find'
-            if (time_passed > random.randint(240,360)):
-                ## after 4-6 minutes return to Normal state
+            if (time_passed > random.randint(120,360)):
+                ## after 2-6 minutes return to Normal state
                 return 'stop_play'
 
             # loop 
@@ -298,19 +297,9 @@ class Find(smach.State):
         rospy.loginfo('Executing state FIND')
         pub_state.publish("find")
         
-        
-
         self.ball_detected = False
-        #self.room_unknown = False
-
+        # subscriber for ball detection
         rospy.Subscriber("/ball_detected", Bool, self.get_ball_detection)
-        #rospy.Subscriber("/no_room", Bool, self.get_no_room)
-        '''
-        dir_path = os.path.dirname(os.path.abspath(__file__))
-        launch_path = "/exp_assignment3/launch/explore.launch"
-        final_path = os.path.join(dir_path, launch_path)
-        rospy.loginfo("Path is: %s", final_path)
-        '''
         
         ## launch explore-lite package
         package = 'explore_lite'
@@ -328,15 +317,15 @@ class Find(smach.State):
         init_time = rospy.Time.now()
 
         while not rospy.is_shutdown():  
-            # count time passed from the start of PLAY state
+            # count time passed from the start of FIND state
             if count == 1:
                 init_time = rospy.Time.now()
             count = count + 1
             current_time = rospy.Time.now()
             time_passed = current_time.secs - init_time.secs
 
-            ## after 4-6 minutes return to Play state
-            if (time_passed > random.randint(300,600)):
+            ## after 4-7 minutes return to Play state
+            if (time_passed > random.randint(240,420)):
                 # stop explore-lite
                 self.movebaseClient.cancel_all_goals()
                 process.stop()

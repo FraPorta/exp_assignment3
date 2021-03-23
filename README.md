@@ -67,8 +67,7 @@ In the **Play** behaviour the robot simply follows the ball. When the ball stops
 
 ## Contents of the repository
 Here the content of the folders contained in this repository is explained
-### Action
-Contains the definition of a custom action message
+
 ### Config
 Contains the yaml configuration file for the joint_position_controller and joint_state_controller, managed by the ros_control plugin
 ### Documentation
@@ -124,7 +123,7 @@ These are some possible technical improvements that can be made to obtain a more
 ## Rqt_graph
 ### Main Architecture and Gazebo Simulation
 <p align="center"> 
-<img src="https://github.com/FraPorta/Itslit/blob/master/rosgraph_exp_ass2.png?raw=true">
+<img src="">
 </p>
 
 ## Author

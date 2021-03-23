@@ -2,7 +2,8 @@
 
 # @package ball_tracking
 #
-# uses cv2 libraries to track the balls in the map follow them and save the positions of the rooms
+# uses cv2 libraries to track the balls in the map, reach them 
+# and save the positions of the rooms, while avoiding obstacles thanks to the laser scan
 
 # Python libs
 import sys
@@ -52,7 +53,7 @@ magentaUpper = (150, 255, 255)
 
 
 
-# class ball_tracking
+## class ball_tracking
 #
 # implements a ball tracking algorithm using cv2
 class ball_tracking:
@@ -95,25 +96,25 @@ class ball_tracking:
         # subscriber to current behaviour
         rospy.Subscriber("/behaviour", String, self.get_behaviour)
 
-    # method get_behaviour
+    ## method get_behaviour
     #
     # subscriber callback to the behaviour topic
     def get_behaviour(self, state):
         self.behaviour = state.data
 
-    # method get_behaviour
+    ## method get_room
     #
-    # subscriber callback to the behaviour topic
+    # subscriber callback to the room topic
     def get_room(self, room):
         self.room = room.data
 
-    # method odom_callback
+    ## method odom_callback
     #
     # subscriber callback to the odometry topic
     def odom_callback(self, msg):
         self.current_pos = msg.pose.pose.position
 
-    # method clbk_laser
+    ## method clbk_laser
     #
     # subscriber callback for the laser topic
     def clbk_laser(self, msg):
@@ -140,7 +141,6 @@ class ball_tracking:
         if linear_x > 0.4:
             linear_x = 0.4
 
-        # this works
         #d0 = 0.15
         #d = 0.30
 
@@ -215,7 +215,7 @@ class ball_tracking:
             #rospy.loginfo(regions)
         #rospy.loginfo(state_description)
 
-    # method get_mask_colour
+    ## method get_mask_colour
     #
     # method to decide which colour mask will be applied
     def get_mask_colour(self, maskGreen, maskBlack, maskRed, maskYellow, maskBlue, maskMagenta):
@@ -247,9 +247,9 @@ class ball_tracking:
         else:
             return [maskGreen, 'None']    # default (the masks are all zeroes)
 
-    # method follow_ball
+    ## method follow_ball
     #
-    # publish velocities to follow the ball
+    # publish velocities to reach the ball
     def follow_ball(self):
         if self.near_ball:
             # if near enough to the ball start following it
@@ -260,7 +260,7 @@ class ball_tracking:
             twist_msg.linear.x = 0.4
             self.vel_pub.publish(twist_msg)
         
-    # method callback
+    ## method callback
     #
     # Callback function of subscribed topic.
     # Here images get converted and features detected
@@ -379,7 +379,7 @@ class ball_tracking:
             self.pub_ball.publish(False)
 
 
-    # method save_info
+    ## method save_info
     #
     # Saves the position of the tracked ball
     def save_info(self, colour):
@@ -391,21 +391,15 @@ class ball_tracking:
         rospy.set_param(colour, ball_pos)
 
 
-# function main
+## function main
 #
-# init node and ball tracking class, and checks when the robot head should be moved
+# init node and ball tracking class
 def main(args):
     # initialize ball tracking node
     rospy.init_node('ball_tracking', anonymous=True)
 
-    rate = rospy.Rate(100)
-
     # Initializes class
     bt = ball_tracking()
-
-    #while not rospy.is_shutdown():
-
-    rate.sleep()
 
     try:
         rospy.spin()
