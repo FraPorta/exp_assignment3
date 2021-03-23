@@ -1,8 +1,14 @@
 <?xml version="1.0"?>
 <launch>
+   <!-- Parameters for home position -->
   <param name="home_x" value="-5" />
   <param name="home_y" value="8" />
 
+  <!-- Parameters for sleep and play frequency: increase the parameter for lower frequency -->
+  <param name="sleep_freq" value="2000" />
+  <param name="play_freq" value="1000" />
+
+  <!-- Parameters for rooms-colors correspondence -->
   <rosparam>
    Entrance : Blue
    Closet : Red
@@ -26,9 +32,12 @@
   <param name="explore/transform_tolerance" value="0.3"/>
   <param name="explore/min_frontier_size" value="0.75"/>
 
-  
+
+
+  <!-- move_base launch -->
   <include file="$(find exp_assignment3)/launch/move_base.launch"></include>
-  
+
+  <!-- scripts launch -->
   <node name="behaviour_controller" pkg="exp_assignment3" type="behaviour_controller.py" output="screen" />
   <node name="motion_controller" pkg="exp_assignment3" type="motion_controller.py" output="screen" />
   <node name="ball_tracking" pkg="exp_assignment3" type="ball_tracking.py" output="screen" />

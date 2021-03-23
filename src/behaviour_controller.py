@@ -58,7 +58,6 @@ class Normal(smach.State):
             current_time = rospy.Time.now()
             time_passed = current_time.secs - init_time.secs
 
-            #if (self.ball_detected and time_passed > 5):
             if (self.ball_detected):
                 ## If the robot sees the ball goes to the Track substate
                 return 'go_track'
@@ -66,9 +65,8 @@ class Normal(smach.State):
             elif (self.play_command):
                 ## If a play command is received, go to the Play state
                 return 'go_play'    
-            #########################################################################################################
-            elif (random.randint(1,1000000) == 1 and time_passed > 30): ######### RICORDATI DI CAMBIARE RATE !!!!!!
-                #####################################################################################################
+            
+            elif (random.randint(1,rospy.get_param("sleep_freq")) == 1 and time_passed > 10):
                 ## go to sleep at random 
                 return 'go_to_sleep'
             
