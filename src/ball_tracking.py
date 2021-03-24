@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# @package ball_tracking
+## @package ball_tracking
 #
 # uses cv2 libraries to track the balls in the map, reach them 
 # and save the positions of the rooms, while avoiding obstacles thanks to the laser scan

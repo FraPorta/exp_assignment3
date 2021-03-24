@@ -7,7 +7,7 @@ This architecture is intended to spawn a robot in a simulated environment, where
 ### Architecture
 
 <p align="center"> 
-<img src="">
+<img src="https://github.com/FraPorta/Itslit/blob/master/exp_ass3_diagram.png?raw=true">
 </p>
 
 #### Components
@@ -123,7 +123,7 @@ These are some possible technical improvements that can be made to obtain a more
 ## Rqt_graph
 ### Main Architecture and Gazebo Simulation
 <p align="center"> 
-<img src="">
+<img src="https://github.com/FraPorta/Itslit/blob/master/rosgraph_assignment3_explore.png?raw=true">
 </p>
 
 ## Author
