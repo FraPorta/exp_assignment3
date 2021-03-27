@@ -1,7 +1,7 @@
 # Assignment 3 Experimental Robotics 
 
 ## Introduction
-This architecture is intended to spawn a robot in a simulated environment, where a human and a ball are spawned too, and make it follow three different behaviours: Normal, Sleep and Play. The dummy human present on the map represents the user who controls the movements of the ball in the environment (which is in reality done by a software component of the architecture).
+This architecture is intended to spawn a wheeled robot in a simulated environment composed by six rooms, divided by walls. In each room there is a coloured ball, used by the robot to identify its position in the house. The robot behaviour is controlled using a finite state machine, that has four states (Normal, Sleep, Play, Find) and two substates (Track Normal and Track Find). The objective of the robot is to map the entire environment, identify all the six rooms and store their position. The sensors equipped by the robot are a Camera and a Laser Scan.
 
 ## Software architecture and state diagram
 ### Architecture
@@ -16,17 +16,22 @@ This architecture is intended to spawn a robot in a simulated environment, where
 * Motion Controller
 * Ball Tracking 
 
+#### Packages
+* move_base
+* gmapping
+* explore_lite
+
 #### Description
-The main architecture is composed by four components, three of them are related to the robot control (one for the behaviour and two for the movement in the map) and the other one represents the user who gives commands to the ball.
+The main architecture is composed by four components and three external packages to plan and execute the movement of the robot in the environment,to create a map and to explore the unknown parts of the map.
 
-The **Human Interaction Generator** component gives goal positions to the ball, using a SimpleActionClient and blocks until the goal is reached, then it sleeps for a random number of seconds between 5 and 10, so that the ball remains still.\
-There are two possibilities: sending a random goal position over the ground and sending the ball underground (always in the same position [0 0 -1]). This choice is made randomly, and at each iteration there is a 25% possibility for the ball to disappear under the ground.
+The **Human Interaction Generator** component 
 
-The **Behaviour Controller** component contains the finite state machine and is responsible of changing the behaviour of the robot publishing the state on a topic every time it changes, so that the other components can change their behaviour accordingly. The three behaviours are: Normal (which is the initial one), Sleep and Play. The details will be covered in the State Machine section. It subscribes to the */ball_detected* topic in order to change from the Normal to the Play state and to the */home_reached* topic to change between Sleep and Normal.
+The **Behaviour Controller** component contains the finite state machine and is responsible of changing the behaviour of the robot publishing the state on a topic every time it changes, so that the other components can change their behaviour accordingly. The four behaviours are: Normal (which is the initial one), Sleep, Play and Find. Normal and Find also have a substate, respectively Track Normal and Track Find. The details will be covered in the State Machine section.
 
-The **Motion Controller** component handles the robot motion when the behaviour is set to Normal or Sleep. It subscribes to the */behaviour* topic in order to get the current state. Moreover it instantiates a SimpleActionClient that communicates to the Action Server *Go to point robot* in order to request the goal positions that the robot should reach.
-In the Normal state, it chooses a random position in the environment, getting a random number for the x and y position between -8 and 8, which are the maximum dimensions of the simulated map. Then it sends the goal to the Server and waits for it to be achieved. If the state changes when a goal has yet to be reached, using the callback of the *send_goal* function it cancels the current goal so that the robot can change its behaviour accordingly.\
-In the Sleep state the motion controller sends the home position (retrieved from the Ros parameters) as the goal to the aAction Server and waits. When the goal is reached it publishes on the */home_reached* topic to alert the Behaviour controller that the robot is at home.
+The **Motion Controller** component handles the robot motion when the behaviour is set to Normal, Sleep or Play. It subscribes to the */behaviour* topic in order to get the current state of the State Machine. 
+In the Normal state, it chooses a random position in the environment, getting a random number for the x and y position between -8 and 8 for *y* and -6 and 6 for *x*, which are the maximum dimensions of the simulated map. Then it sends the goal to the *move_base* action server and waits for it to be achieved. If the state changes when a goal has yet to be reached, using the callback of the *send_goal* function it cancels the current goal so that the robot can change its behaviour accordingly and immediately.\
+In the Sleep state the motion controller sends the home position (retrieved from the Ros parameters) as the goal to the  move_base Action Server and waits. When the goal is reached it publishes on the */home_reached* topic to alert the Behaviour controller that the robot is at home.\
+In the Play state 
 
 The **Ball tracking** component implements the openCv algorithm to detect the ball (more precisely the color of the ball) and makes the robot follow the ball when the actual behaviour is Play. It subscribes to the robot camera topic (*/robot/camera1/image_raw/compressed*) and, inside the subscriber callback, it uses the OpenCv libraries to detect the ball in the environment. When the ball is detected it immediately sends a message on the */ball_detected* topic for the Behaviour controller. Then when the state is transitioned to the Play one, it publishes velocities to the */robot/cmd* topic in order to make the robot follow the ball. When the ball stops, and so also the robot stops, it stops tracking the ball and publish commands to the */robot/joint_position_controller/command* topic to make the head revolute joint of the robot move to the right, then to the left and then back to the default position. After having finished it returns to track the ball and follow it until the state changes or the ball stops again.
 
@@ -56,14 +61,18 @@ I will list only the ros topics directly related to the code that I developed (n
 ### State Machine
 This is the state machine inside the Behaviour Controller component
 <p align="center"> 
-<img src="https://github.com/FraPorta/Itslit/blob/master/state_diagram_2.png?raw=true">
+<img src="https://github.com/FraPorta/Itslit/blob/master/StateMachine.png?raw=true">
 </p>
 
-The **Normal** behaviour consists in moving randomly around the map. Whenever the ball is detected by the camera, it goes to the Play behaviour, otherwise it can randomly go to the Sleep state after at least 30 seconds have passed in the Normal behaviour.
+The **Normal** behaviour consists in moving randomly around the map. Whenever the ball is detected by the *ball_tracking* node, it goes to the Track Normal substate, otherwise it can randomly go to the *Sleep* state after at least 10 seconds have passed in the *Normal* behaviour or in the *Play* state if a *play_command* is received from the *human_interaction_gen* node.\
+In the **Track Normal** behviour the robot is controlled by the *ball_tracking* node,  that makes it reach the detected ball and store its position. After that, it returns to the *Normal* behaviour  
 
-The **Sleep** behaviour consists in going to the home position and staying there for some time. The transition to the Normal state happens after a random time period (20-40 seconds), that starts after the robot has reached the home position. 
+The **Sleep** behaviour consists in going to the home position and staying there for some time. The transition to the *Normal* state happens after a random time period (20-40 seconds), that starts after the robot has reached the home position. 
 
-In the **Play** behaviour the robot simply follows the ball. When the ball stops (and so also the robot stops) it moves his head 45 degrees on one side, wait some seconds, move it to the other side, wait some seconds and return to the zero position (this is managed by the ball_tracking node). When the ball is not detected anymore, a counter starts and if it reaches 15 seconds without seeing the ball again, it returns to the Normal state. This time has been chosen because it is approximately the time that the robot takes to make a 360 degree turn around himself, such that if the ball is not underground, it will be detected again.
+In the **Play** behaviour the robot goes in front of the human and waits for a *'go_to'* command, which is a string representing one of the rooms in the house. If the room position has already been stored in the ros parameters, the robot will remain in the *Play* state, it will reach the desired room, stay there for some time and then return to the human position. If the room position is unknown, the robot will switch to the *Find* state. After some time (random between 2 and 6 minutes) in the Play state, the robot will return to the Normal state.
+
+In the **Find** behaviour the robot will explore the environment using the explore_lite package. When a ball is detected, it will switch to the *Track Find* substate. After some time (random between 4 and 7 minutes), it returns to the *Play* behaviour.
+The **Track Find**
 
 ## Contents of the repository
 Here the content of the folders contained in this repository is explained
@@ -86,36 +95,32 @@ in the worlds folder there is the description of the simulation world that will 
 
 
 ## Installation and running procedure
+First install this three packages, if you don't already have them on your machine: 
+```console
+sudo apt-get install ros-<ros_distro>-openslam-gmapping
+sudo apt-get install ros-<ros_distro>-navigation
+sudo apt-get install ros-<ros_distro>-explore-lite
+```
+
 The first thing to do, after having cloned the repository in the Ros workspace, is to build the package, using the following command in the workspace:
-    
+
 ```console
 catkin_make
 ```
-In order to run the system, you have to launch the two following launch files in this order, the first one loads the gazebo world and runs the action servers, the second one runs the rest of the architecture:
+In order to run the system, you have to launch the two following launch files in this order, the first one loads the gazebo world and runs the gmapping package, the second one runs the move_base package, loads the necessary ros parameters and launches the rest of the nodes. You can modify the frequency of the Sleep and Play behaviours from the `scripts.launch` launchfile.
 
 ```console
-roslaunch exp_assignment2 gazebo_world.launch
-roslaunch exp_assignment2 behaviour_architecture.launch 
+roslaunch exp_assignment3 simulation.launch
+roslaunch exp_assignment3 scripts.launch 
 ```
-You need to have the ros_control and gazebo ros_control related packages, if not some problems may arise in the Play behaviour.
 
 ## System’s features
-The principal way used to stress the sysytem is the complete randomness of the elements of the architecture: the motion of the ball is managed by the human node using random goal positions and random wait times between a movement and another. Moreover the choice of givinig a goal position over or under the ground is also random. The robot in the Normal state moves randomly on the map and always tries to detect the ball, so its behaviour can change at any time. When in the Play state the robot always follows the ball until it stops or it disappears, so it is bound to the randomness of the ball motions. The transition between Normal and Sleep behaviour is also random and it is allowed after 30 seconds of Normal behaviour, in order to make it less probable than the Play one which is more insteresting in testing the architecture robustness.\
-One of the system features is the fact that when in the Normal state, the robot will always be ready to cancel the current goal and transition to the required state (Play or Sleep), thanks to the capabilities of the Action Server-Client system and the feedback messages.\
-The system has been tested during various sessions, with one of them in particular that lasted two hours straight, and no major issues has been found, apart for one particular case which will be explained in the next paragraph.
+
 
 ## System’s limitations
-The main issue I found out during the early testing sessions is the fact that the initial velocity of the ball defined in the Go to point ball node was too high: this lead to two main problems. The first one was te fact that the robot struggled to follow the ball properly and often lost track of it when it was moving perpendicular to the direction of the robot in the Play state. The other is the fact that while the robot was following the ball, if the ball started moving directly against the direction of motion of the robot, it overturns itself and could not move anymore because the velocities given in the opposite direction of its previous motion were too high\
-These problems were overcome by lowering the maximum velocity of the ball in the Action Server and increasiing a bit the velocity of the robot during the ball tracking. The robot never again lost track of the ball during my tests. The overturning happened another time at the end of the two hours session, probably because the tracking returned active exactly when the ball was very close to the robot camera after performing the head movement. Generally, I saw several times the ball moving directly towards the robot at full speed during that same test and also other test sessions, and the overturning did not happen ever again, so I concluded that it was a very specific case. 
-Another limitation I found is that sometimes, after in the Play behaviour the robot stops and performs the head movement, the ball is still stationary in front of it, so the head movement is performed twice in a row. This could be solved slitghly modifying the stop times of the ball or the duration of the head movement, but I preferred leaving it like it is beacuse it is a very rare issue and it does not compromise the overall functioning of the architecture.  
+
 
 ## Possible technical improvements
-These are some possible technical improvements that can be made to obtain a more realistic and performing system:
-- Setting also the desired orientation of the robot in the normal and sleep behaviours
-- Avoid sending the ball on the human position
-- Adding a more realistic model of the pet robot (now the neck and head are only a cylinder and a box)
-- Adding a system for obstacle avoidance in the robot
-- Eliminate the 30 seconds restriction I set as needed to pass to the Sleep behaviour from Normal to increase the randomness even more
 
 
 
