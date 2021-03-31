@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.13"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Experimental Robotics Assignment 3: Main Page</title>
+<title>Experimental Robotics Assignment 3: Assignment 3 Experimental Robotics</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -23,7 +23,7 @@
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">Experimental Robotics Assignment 3
    </div>
-   <div id="projectbrief">An architecture to control a robot in a gazebo simulation environment with a behaviour state machine</div>
+   <div id="projectbrief">This architecture controls a wheeled robot in a simulated environment composed by six rooms, divided by walls. In each room there is a coloured ball, used by the robot to identify its position in the house. The robot behaviour is controlled using a finite state machine, that has four states (Normal, Sleep, Play, Find) and two substates (Track Normal and Track Find). The objective of the robot is to map the entire environment, identify all the six rooms and store their position. The sensors equipped by the robot are a Camera and a Laser Scan.</div>
   </td>
  </tr>
  </tbody>
@@ -60,10 +60,117 @@ $(function() {
 
 <div class="header">
   <div class="headertitle">
-<div class="title">Experimental Robotics Assignment 3 Documentation</div>  </div>
+<div class="title">Assignment 3 Experimental Robotics </div>  </div>
 </div><!--header-->
 <div class="contents">
-</div><!-- contents -->
+<div class="textblock"><h2>Introduction</h2>
+<p>This architecture controls a wheeled robot in a simulated environment composed by six rooms, divided by walls. In each room there is a coloured ball, used by the robot to identify its position in the house. The robot behaviour is controlled using a finite state machine, that has four states (Normal, Sleep, Play, Find) and two substates (Track Normal and Track Find). The objective of the robot is to map the entire environment, identify all the six rooms and store their position. The sensors equipped by the robot are a Camera and a Laser Scan.</p>
+<h2>Software architecture and state diagram</h2>
+<h3>Architecture</h3>
+<div class="image">
+<img src="https://github.com/FraPorta/Itslit/blob/master/exp_ass3_diagram.png?raw=true"/>
+</div>
+ <h4>Components</h4>
+<ul>
+<li>Human Interaction Generator</li>
+<li>Behaviour Controller</li>
+<li>Motion Controller</li>
+<li>Ball Tracking</li>
+</ul>
+<h4>Packages</h4>
+<ul>
+<li>move_base</li>
+<li>gmapping</li>
+<li>explore_lite</li>
+</ul>
+<h4>Description</h4>
+<p>The main architecture is composed by four components and three external packages to plan and execute the movement of the robot in the environment, to create a map and to explore the unknown parts of the map.</p>
+<p>The <b>Human Interaction Generator</b> component simulates a human who can execute two actions: send <em>Play</em> commands to the robot at random (the frequency can be changed through a ROS parameter set in the <em>scripts</em> launch file), and send <em>go_to</em> commands with the name of the room where the robot should go, when it is in the Play behaviour and in front of the human waiting for the command.</p>
+<p>The <b>Behaviour Controller</b> component contains the finite state machine and is responsible of changing the behaviour of the robot publishing the state on a topic every time it changes, so that the other components can change their behaviour accordingly. The four behaviours are: Normal (which is the initial one), Sleep, Play and Find. Normal and Find also have a substate, respectively Track Normal and Track Find. The details will be covered in the State Machine section.</p>
+<p>The <b>Motion Controller</b> component handles the robot motion when the behaviour is set to Normal, Sleep or Play. It subscribes to the */behaviour* topic in order to get the current state of the State Machine. In the Normal state, it chooses a random position in the environment, getting a random number for the x and y position between -8 and 8 for <em>y</em> and -6 and 6 for <em>x</em>, which are the maximum dimensions of the simulated map. Then it sends the goal to the <em>move_base</em> action server and waits for it to be achieved. If the state changes when a goal is yet to be reached, it cancels the current goal using the callback of the <em>send_goal()</em> function so that the robot can change its behaviour accordingly and immediately.\ In the Sleep state the motion controller sends the home position (retrieved from the Ros parameters) as the goal to the move_base Action Server and waits. When the goal is reached it publishes on the */home_reached* topic to alert the Behaviour controller that the robot is at home.\ In the Play state there are two possibilities: if the robot is not in front of the human, it reaches the human position (always using the <em>move_base</em> action server), notifies to the <em>human interaction generator</em> node on the */human_reached* topic that it is in front of him, and waits for a <em>go_to</em> command; when the robot receives the go_to command, if the location is already known (stored in the ROS parameters server) it moves to that location, waits a random time and then returns to the human position waiting for another <em>go_to</em> command. If the location is unknown, it publishes on the */no_room* topic and the behaviour changes to <em>Find</em>.</p>
+<p>The <b>Ball tracking</b> component implements the openCv algorithm to detect the ball (more precisely the color of the ball) and controls the robot movements in the <em>Track Normal</em> and <em>Track Find</em> behaviours. It subscribes to the robot camera topic (*/robot/camera1/image_raw/compressed*) and, inside the subscriber callback, it uses the OpenCv libraries to detect the balls in the environment. When a ball is detected and the robot is in the <em>Normal</em> or <em>Find</em> behaviour, it immediately sends a message on the */ball_detected* topic for the Behaviour controller. Since there are six balls of different colours and more than one could be detected at the same time, there is a function called <em>get_mask_colour()</em> that selects the bigger (and so closer) ball detected. Then the corresponding mask is created and when the state has transitioned from Find to Track Find or from Normal to Track Normal, the node publishes velocities to the */cmd_vel* topic in order to make the robot reach the closer ball position. At this point, the position of the ball is stored on the parameter server with the name of the ball colour and a msg is published on the */ball_reached* topic to alert the behaviour controller. If the robot is in the Track Normal state, it returns to the Normal one. When the robot is in the Track Find substate, if the room corresponding to the detected colour was the one specified by the human in the last <em>go_to</em> command, the one that made the robot transition from Play to Find, the node publishes <em>True</em> on the */room_found* topic. If that is the case, it means that the searched room is finally found and the robot will return to the Play behaviour; if on the contrary the room is not the right one, it publishes <em>False</em> on the */room_found* topic and the robot returns to the Find state. This node also implements obstacle avoidance using the LaserScan sensor, to allow the robot to avoid the walls while reaching the balls.</p>
+<p>The <b>move_base</b> package provides an implementation of an action that, given a goal in the world, will attempt to reach it with the mobile base of the robot.</p>
+<p>The <b>gmapping</b> package provides laser-based SLAM (Simultaneous Localization and Mapping), as a ROS node called <em>slam_gmapping</em>. Using <em>slam_gmapping</em>, a 2-D occupancy grid map from laser and pose data collected by the mobile robot is created.</p>
+<p>The <b>explore_lite</b> package provides greedy frontier-based exploration. When the node is running, robot will greedily explore its environment until no frontiers could be found. Movement commands will be send to <em>move_base</em>.</p>
+<h4>Ros Parameters</h4>
+<ul>
+<li>home_x &rarr; home x position on the map</li>
+<li>home_y &rarr; home y position on the map</li>
+<li>sleep_freq &rarr; frequency of the Sleep behaviour</li>
+<li>play_freq &rarr; frequency of Play command sent by the user</li>
+</ul>
+<p>Parameters for rooms-colors correspondence:</p><ul>
+<li>Entrance : Blue</li>
+<li>Closet : Red</li>
+<li>Livingroom : Green</li>
+<li>Kitchen : Yellow</li>
+<li>Bathroom : Magenta</li>
+<li>Bedroom : Black</li>
+<li>explore_lite parameters</li>
+<li>gmapping parameters</li>
+</ul>
+<h4>Ros Topics</h4>
+<ul>
+<li>/play_command &rarr; topic on which the <em><a class="el" href="namespacehuman__interaction__gen.html" title="Human interactions with the robot: sends play commands and goTo + location commands. ">human_interaction_gen</a></em> node sends the command to make the robot go in the Play behaviour</li>
+<li>/behaviour &rarr; topic on which the current state is published by the behaviour controller</li>
+<li>/ball_detected &rarr; topic on which <em><a class="el" href="namespaceball__tracking.html" title="uses cv2 libraries to track the balls in the map, reach them and save the positions of the rooms...">ball_tracking</a></em> publishes when the ball is detected</li>
+<li>/ball_reached &rarr; topic on which <em><a class="el" href="namespaceball__tracking.html" title="uses cv2 libraries to track the balls in the map, reach them and save the positions of the rooms...">ball_tracking</a></em> publishes when the robot is in front of the ball</li>
+<li>/room_found &rarr; topic on which <em><a class="el" href="namespaceball__tracking.html" title="uses cv2 libraries to track the balls in the map, reach them and save the positions of the rooms...">ball_tracking</a></em> publishes if the searched room has been found</li>
+<li>/no_room &rarr; topic on which <em><a class="el" href="namespacemotion__controller.html" title="makes the robot move in the map respecting the normal, sleep and play behaviour ">motion_controller</a></em> publishes if the room requested by the GoTo command has been already explored</li>
+<li>/home_reached &rarr; topic on which <em><a class="el" href="namespacemotion__controller.html" title="makes the robot move in the map respecting the normal, sleep and play behaviour ">motion_controller</a></em> publishes when the home is reached during the Sleep behaviour</li>
+<li>/human_reached &rarr; topic on which <em><a class="el" href="namespacemotion__controller.html" title="makes the robot move in the map respecting the normal, sleep and play behaviour ">motion_controller</a></em> publishes when the human is reached during the Play behaviour</li>
+<li>/camera1/image_raw/compressed &rarr; topic used to retrieve the images from the robot camera</li>
+<li>/cmd_vel &rarr; topic used to publish velocities to the robot by the <em><a class="el" href="namespaceball__tracking.html" title="uses cv2 libraries to track the balls in the map, reach them and save the positions of the rooms...">ball_tracking</a></em> component and the <em>move_base</em> package</li>
+<li>/odom &rarr; topic used to get the robot odometry</li>
+<li>/scan &rarr; topic for the LaserScan output, used by <em><a class="el" href="namespaceball__tracking.html" title="uses cv2 libraries to track the balls in the map, reach them and save the positions of the rooms...">ball_tracking</a></em> and <em>move_base</em> to avoid obstacles</li>
+<li>/map &rarr; topic on which the map (OccupancyGrid) created by gmapping is published</li>
+<li>/goal &rarr; goal for the <em>move_base</em> action server</li>
+<li>/result &rarr; result of the <em>move_base</em> action server</li>
+</ul>
+<h3>State Machine</h3>
+<p>This is the state machine inside the Behaviour Controller component </p>
+<div class="image">
+<img src="https://github.com/FraPorta/Itslit/blob/master/StateMachine.png?raw=true"/>
+</div>
+ <p>The <b>Normal</b> behaviour consists in moving randomly around the map. Whenever a ball is detected by the <em><a class="el" href="namespaceball__tracking.html" title="uses cv2 libraries to track the balls in the map, reach them and save the positions of the rooms...">ball_tracking</a></em> node, it goes to the Track Normal substate, otherwise it can go in the <em>Play</em> state when a <em>play_command</em> is received from the <em><a class="el" href="namespacehuman__interaction__gen.html" title="Human interactions with the robot: sends play commands and goTo + location commands. ">human_interaction_gen</a></em> node or randomly to the <em>Sleep</em> state after at least 10 seconds have passed in the <em>Normal</em> behaviour. In the <b>Track Normal</b> behaviour the robot is controlled by the <em><a class="el" href="namespaceball__tracking.html" title="uses cv2 libraries to track the balls in the map, reach them and save the positions of the rooms...">ball_tracking</a></em> node, that makes it reach the detected ball and store its position. After that, it returns to the <em>Normal</em> behaviour</p>
+<p>The <b>Sleep</b> behaviour consists in going to the home position and staying there for some time. The transition to the <em>Normal</em> state happens after a random time period (20-40 seconds), that starts after the robot has reached the home position.</p>
+<p>In the <b>Play</b> behaviour the robot goes in front of the human and waits for a <em>go_to</em> command, which is a string representing one of the rooms in the house. If the room position was already stored in the ROS parameters, the robot will remain in the <em>Play</em> state, it will reach the desired room, stay there for some time and then return to the human position. If the room position is unknown, the robot will switch to the <em>Find</em> state. After some time (random between 2 and 6 minutes) in the Play state, the robot will return to the Normal state.</p>
+<p>In the <b>Find</b> behaviour the robot will explore the environment using the explore_lite package. When a ball is detected, it will switch to the <em>Track Find</em> substate. After some time (random between 4 and 7 minutes), it returns to the <em>Play</em> behaviour. In the <b>Track Find</b> behaviour the robot is controlled by the <em><a class="el" href="namespaceball__tracking.html" title="uses cv2 libraries to track the balls in the map, reach them and save the positions of the rooms...">ball_tracking</a></em> node, that makes it reach the detected ball and store its position. After that, it checks if the room corresponding to the detected ball is the one requested by the user in the last <em>go_to</em> command: if yes, the robot returns to the Play state; if not, the robot returns to the Find behaviour and continues to search for the room.</p>
+<h2>Contents of the repository</h2>
+<p>Here the content of the folders contained in this repository is explained</p>
+<h3>Config</h3>
+<p>Contains the configuration file for Rviz </p><h3>Documentation</h3>
+<p>Contains the html documentation of the project (in order to see it, open the <em>index.html</em> file in a web browser like Chrome or Firefox) </p><h3>Launch</h3>
+<p>Contains the necessary launch files. <em>gmapping.launch</em> and <em>move_base.launch</em> are used to launch the two packages from the other launch files. <em>simulation.launch</em> opens the gazebo simulation (spawns the robot, the human, the balls and the world) and Rviz and launches the <em>gmapping</em> package. <em>scripts.launch</em> runs the nodes in the <em>src</em> folder and <em>move_base</em> and loads the parameters in the server </p><h3>Param</h3>
+<p>Contains the yaml files that define the parameters needed to execute the <em>move_base</em> package correctly </p><h3>Src</h3>
+<p>Contains the four python files of the main architecture: <em>human_interaction_gen.py</em>, <em>behaviour_controller.py</em>, <em>motion_controller.py</em> and <em>ball_tracking.py</em> </p><h3>Urdf</h3>
+<p>Contains the descriptions of the robot model and the gazebo file, and the description of the human. </p><h3>Worlds</h3>
+<p>There is the description of the house that will be loaded on Gazebo.</p>
+<h2>Installation and running procedure</h2>
+<p>First install this three packages, if you don't already have them on your machine: </p><div class="fragment"><div class="line">sudo apt-get install ros-&lt;ros_distro&gt;-openslam-gmapping</div><div class="line">sudo apt-get install ros-&lt;ros_distro&gt;-navigation</div><div class="line">sudo apt-get install ros-&lt;ros_distro&gt;-explore-lite</div></div><!-- fragment --><p>Then, after cloning the repository in your Ros workspace, build the package, using the following command:</p>
+<div class="fragment"><div class="line">catkin_make</div></div><!-- fragment --><p> In order to run the system, you have to launch the two following launch files in this order. The first one loads on gazebo the world, the robot and the human and runs the gmapping package, the second one runs the move_base package, loads the necessary ros parameters and launches the rest of the nodes. You can modify the frequency of the Sleep and Play behaviours from the <code>scripts.launch</code> launchfile.</p>
+<div class="fragment"><div class="line">roslaunch exp_assignment3 simulation.launch</div><div class="line">roslaunch exp_assignment3 scripts.launch </div></div><!-- fragment --><h2>System’s features</h2>
+<p>The system manages to achieve the expected behaviours in all the tested situations: in two long sessions of continuous run of the architecture the robot did not show strange behaviours and managed to reach and store all the locations in the house, as you can see in the picture at the end of this paragraph (all the colours are present in the ROS parameter server, which means that all the rooms positions were explored and stored). Moreover, whatever state the robot is in, it always runs an obstacle avoidance algorithm, either if it is using the move_base package, either if it is reaching the balls in the Track substates. In fact, I implemented a simple wall avoidance algorithm inside the node that makes the robot track and reach the balls in the environment, so that it does not get stuck in the walls while reaching them. Another system feature is the fact that when in the Normal and Find state, the robot will always be ready to cancel the current goal and transition to the required state or substate, thanks to the capabilities of the Action Server-Client system of <em>move_base</em> and the feedback messages. Finally, I used randomness to stress the system: the <em>play</em> commands sent by the <em><a class="el" href="namespacehuman__interaction__gen.html" title="Human interactions with the robot: sends play commands and goTo + location commands. ">human_interaction_gen</a></em> node are sent at completely random times (you can change the "frequency" in the launch file) and the locations contained in the <em>go_to</em> commands are selected randomly between the six rooms each time. Moreover, also the waiting times of the robot when sleeping or when it arrives to a location and the time passed before changing behaviours (from Play to Normal, from Normal to Sleep or from Find to Play) are chosen randomly. During my tests, the system still managed to mantain the expected behaviour during the whole simulation, also with all these random factors.</p>
+<div class="image">
+<img src="https://github.com/FraPorta/Itslit/blob/master/AllLocationsReached_2.png?raw=true"/>
+</div>
+ <h2>System’s limitations</h2>
+<p>In general, one of the main limitations of the system is the fact that it may need a long time to detect and store all the ball positions in the house, since the user requests and the world exploration in the Normal state are completely random. It may be possible that, using the explore_lite package in the Find behaviour, the robot could not find the user-requested location in time. This may happen because the exploration is only based on the explore_lite frontiers and not on the already stored room positions. As a result, a room could result as already explored for the explore_lite algorithm but in reality its position is not saved on the parameters server. Moreover, when the explore_lite package does not find any new frontier to explore, that is when the environment is completely explored from the point of view of this package, the robot stops and stays still until the state is changed (it takes some minutes). Some strange behaviours were rarely observed when the robot switch between Find and Track Find: it may happen that the robot remains still after the state transition, because the ball is no longer in the field of view of the camera.</p>
+<h2>Possible technical improvements</h2>
+<ul>
+<li>Exploring the environment using a knowledge-based approach instead of explore_lite, for example using the already known locations, in order to lower the time the robot needs to find the requested location and avoid returning to the Play behaviour without having found the correct room.</li>
+<li>A system to avoid going into the Track substates when an already stored ball is detected could be implemented. As it is right now, the system will always track a ball when the cv algorithm detects it, unless it is the last one which was detected. This could save a lot of time in finding all the locations.</li>
+<li>When the <em>explore_lite</em> algorithm cannot find any frontier, it stops: a technical improvement could be to make the robot change behaviour when this happens, instead of waiting for the state machine to transition normally to the Play behaviour after some minutes during which the robot does not do anything.</li>
+<li>Test the system in a more complex map and see if it works as well.</li>
+</ul>
+<h2>Rqt_graph</h2>
+<h3>Main Architecture and Gazebo Simulation</h3>
+<div class="image">
+<img src="https://github.com/FraPorta/Itslit/blob/master/rosgraph_assignment3_explore.png?raw=true"/>
+</div>
+ <h2>Author</h2>
+<p>Francesco Porta\ E-mail: <a href="#" onclick="location.href='mai'+'lto:'+'fra'+'nc'+'y85'+'7@'+'gma'+'il'+'.co'+'m'; return false;">franc<span style="display: none;">.nosp@m.</span>y857<span style="display: none;">.nosp@m.</span>@gmai<span style="display: none;">.nosp@m.</span>l.co<span style="display: none;">.nosp@m.</span>m</a>\ ID: 4376330 </p>
+</div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by &#160;<a href="http://www.doxygen.org/index.html">
