@@ -100,20 +100,21 @@ In the **Track Find** behaviour the robot is controlled by the *ball_tracking* n
 Here the content of the folders contained in this repository is explained
 
 ### Config
-Contains the yaml configuration file for the joint_position_controller and joint_state_controller, managed by the ros_control plugin
+Contains the configuration file for Rviz
 ### Documentation
 Contains the html documentation of the project (in order to see it, open the *index.html* file in a web browser like Chrome or Firefox)
 ### Launch
-Contains two launch files. One (*gazebo_world.launch*) is for showing on gazebo the simulated world and spawning  the human, the robot, the ball and their relative action servers and joint controller.
-The other one is for the behaviour architecture that manages the robot and ball movements.
-### Scripts
-Contains the two action servers python files: *go_to_point_ball.py* and *go_to_point_robot.py*
+Contains the necessary launch files. gmapping.launch and move_base.launch are used to launch the two packages from the other launch files.
+*simulation.launch* opens the gazebo simulation (spawning the robot, the human, the balls and the world) and Rviz and launches the gmapping package. 
+*scripts.launch* runs the nodes in the *src* folder and *move_base* and loads the parameters in the server
+### Param
+Contains the yaml files that define the parameters needed to run the *move_base* package
 ### Src
 Contains the four python files (the components) of the main architecture: *human_interaction_gen.py*, *behaviour_controller.py*, *motion_controller.py* and *ball_tracking.py*
 ### Urdf
-Contains the descriptions of the robot model, the ball and their relative gazebo files, and the description of the human. The description of the robot has been modified to include two new links and corresponding joints, a fixed one for the neck and a revolute for the head. Moreover a transmission motor has been included to make the robot head position controllable using the ros_control plugin.
+Contains the descriptions of the robot model and the gazebo file, and the description of the human. 
 ### Worlds
-in the worlds folder there is the description of the simulation world that will be loaded on gazebo.
+in the worlds folder there is the description of the house that will be loaded on gazebo.
 
 
 ## Installation and running procedure
@@ -124,12 +125,12 @@ sudo apt-get install ros-<ros_distro>-navigation
 sudo apt-get install ros-<ros_distro>-explore-lite
 ```
 
-The first thing to do, after having cloned the repository in the Ros workspace, is to build the package, using the following command in the workspace:
+The first thing to do, after cloning the repository in your Ros workspace, is to build the package, using the following command in the workspace:
 
 ```console
 catkin_make
 ```
-In order to run the system, you have to launch the two following launch files in this order, the first one loads the gazebo world and runs the gmapping package, the second one runs the move_base package, loads the necessary ros parameters and launches the rest of the nodes. You can modify the frequency of the Sleep and Play behaviours from the `scripts.launch` launchfile.
+In order to run the system, you have to launch the two following launch files in this order. The first one loads the gazebo world and runs the gmapping package, the second one runs the move_base package, loads the necessary ros parameters and launches the rest of the nodes. You can modify the frequency of the Sleep and Play behaviours from the `scripts.launch` launchfile.
 
 ```console
 roslaunch exp_assignment3 simulation.launch
@@ -137,13 +138,20 @@ roslaunch exp_assignment3 scripts.launch
 ```
 
 ## System’s features
+The system manages to achieve the expected behaviours in all the tested situations: in two long sessions of continuous run of the architecture the robot did not show strange behaviours and managed to reach and store all the locations in the house, as you can see in the picture at the end of this paragraph (all the colours are present in the ROS parameter server, which means that all the rooms positions were explored and stored).
+Moreover, whatever state the robot is in, it always runs an obstacle avoidance algorithm, either if it is using the move_base package, either if it is reaching the balls in the Track substates. In fact, I implemented a simple wall avoidance algorithm inside the node that makes the robot track and reach the balls in the environment, so that it does not get stuck in the walls while reaching them.
+Another system feature is the fact that when in the Normal and Find state, the robot will always be ready to cancel the current goal and transition to the required state or substate, thanks to the capabilities of the Action Server-Client system of *move_base* and the feedback messages.
+Finally, I used randomness to stress the system: the *play* commands sent by the *human_interaction_gen* node are sent at completely random times (you can change the "frequency" in the launch file) and the locations contained in the *go_to* commands are selected randomly between the six rooms each time. Moreover, also the waiting times of the robot when sleeping or when it arrives to a location and the time passed before changing behaviours (from Play to Normal, from Normal to Sleep or from Find to Play) are chosen randomly. The system in my tests still managed to mantain the expected behaviour during the whole simulation, also with all these random factors.
 
+<p align="center"> 
+<img src="https://github.com/FraPorta/Itslit/blob/master/AllLocationsReached_2.png?raw=true">
+</p>
 
 ## System’s limitations
-
+It may be possible that, using the explore_lite package in the Find behaviour, the robot could not find the user-requested location in time.
 
 ## Possible technical improvements
-
+Exploring the environment using a knowledge-based approach instead of explore_lite, using the already known locations to improve the time the robot uses to find the requested loaction.
 
 
 
