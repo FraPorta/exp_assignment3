@@ -148,10 +148,13 @@ Finally, I used randomness to stress the system: the *play* commands sent by the
 </p>
 
 ## System’s limitations
-It may be possible that, using the explore_lite package in the Find behaviour, the robot could not find the user-requested location in time.
+In general, one of the main limitations of the system is the fact that it may need a long time to detect and store all the ball positions in the house, since the user requests and world exploration in the Normal state are completely random.
+It may be possible that, using the explore_lite package in the Find behaviour, the robot could not find the user-requested location in time. This may happen because the exploration is only based on the knowledge of the map and not on the already stored room positions. 
+
+
 
 ## Possible technical improvements
-Exploring the environment using a knowledge-based approach instead of explore_lite, using the already known locations to improve the time the robot uses to find the requested loaction.
+Exploring the environment using a knowledge-based approach instead of explore_lite, using the already known locations to improve the time the robot needs to find the requested loaction and avoid returning to the Play behaviour without having found the correct room.
 
 
 
