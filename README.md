@@ -152,11 +152,13 @@ In general, one of the main limitations of the system is the fact that it may ne
 It may be possible that, using the explore_lite package in the Find behaviour, the robot could not find the user-requested location in time. This may happen because the exploration is only based on the explore_lite frontiers and not on the already stored room positions. As a result, a room could result as already explored for the explore_lite algorithm but in reality its position is not saved on the parameters server.
 Moreover, when the explore_lite package does not find any new frontier to explore, that is when the environment is completely explored from the point of view of this package, the robot stops and stays still until the state is changed (it takes some minutes).
 Some strange behaviours were rarely observed when the robot switch between Find and Track Find: it may happen that the robot remains still after the state transition, because the ball is no longer in the field of view of the camera.  
+In the Normal behaviour some random positions could be outside of the walls of the house, so the robot may remain stuck until it changes behaviour (goes to Sleep, Normal or Track Normal).
 
 ## Possible technical improvements
 * Exploring the environment using a knowledge-based approach instead of explore_lite, for example using the already known locations, in order to lower the time the robot needs to find the requested location and avoid returning to the Play behaviour without having found the correct room.
 * A system to avoid going into the Track substates when an already stored ball is detected could be implemented. As it is right now, the system will always track a ball when the cv algorithm detects it, unless it is the last one which was detected. This could save a lot of time in finding all the locations.
 * When the *explore_lite* algorithm cannot find any frontier, it stops: a technical improvement could be to make the robot change behaviour when this happens, instead of waiting for the state machine to transition normally to the Play behaviour after some minutes during which the robot does not do anything.
+* Exclude the positions outside the walls of the house from the possible random points to be given to the robot in the Normal behaviour. 
 * Test the system in a more complex map and see if it works as well.
 
 ## Rqt_graph
